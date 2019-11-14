@@ -12,7 +12,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.dispatcher import (async_dispatcher_send, async_dispatcher_connect)
 
 from .pyextalife import ExtaLifeAPI
-
+from datetime import timedelta
 
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = "extalife"
