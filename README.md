@@ -12,7 +12,7 @@ ZAMEL Exta Life integration with Home Assistant based on custom component.
 * Heating controller: RGT-01, GKN-01
 * Sensors: RCT-21, RCT-22, RNK-21&RNK-22 build-in temperature sensor, flood sensor RCZ-21, motion sensor RCR-21, window sensor RCK-21, multisensor RCM-21
 
-**Note:**: Certain switches are mapped into Home Asistant life entities depending on icon assigned to them. This is to support voice control by Google Assistant and others and because switches are mostly used for light control.
+**Note:**: Certain switches are mapped into Home Asistant light entities depending on icon assigned to them. This is to support voice control by Google Assistant and others and because switches are mostly used for light control.
 ### Configuration
 Edit your configuration.yaml file and add the following lines:
 
