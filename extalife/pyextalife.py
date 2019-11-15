@@ -1,4 +1,4 @@
-""" ExtaLife JSN API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
+""" ExtaLife JSON API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
 from __future__ import print_function
 
 import logging
@@ -132,50 +132,6 @@ class ExtaLifeAPI:
             channels = receiver_channels
             channels.extend(sensor_channels)
 
-            climate = {
-                "id": 66,
-                "device": 1,
-                "type": 16,
-                "is_powered": False,
-                "serial": 1048917,
-                "version": 16777401,
-                "valid_software": True,
-                "exta_free_device": False,
-                "alias": "Grzejnik pokój",
-                "channel": 1,
-                "icon": 36,
-                "fav": [180, 200, 225, 235],
-                "power": 1,
-                "value": 220,
-                "waiting_to_synchronize": False,
-                "battery_status": False,
-                "temperature_old": 230,
-                "temperature": 230,
-                "work_mode": True,
-            }
-            slr22 = {
-                "id": 67,
-                "device": 1,
-                "type": 27,
-                "is_powered": False,
-                "serial": 1048917,
-                "version": 16777401,
-                "valid_software": True,
-                "exta_free_device": False,
-                "alias": "Fake SLR22",
-                "channel": 1,
-                "icon": 36,
-                "fav": [180, 200, 225, 235],
-                "power": 1,
-                "value": 50,
-                "waiting_to_synchronize": False,
-                "battery_status": False,
-                "mode": 1,
-                "mode_val": 4294967295,
-            }
-
-            channels.append({"id": "66-1", "data": climate})
-            channels.append({"id": "67-1", "data": slr22})
             return channels
 
         except TCPCmdError:
