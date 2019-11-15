@@ -1,4 +1,4 @@
-""" ExtaLife JSN API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
+""" ExtaLife JSON API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
 from __future__ import print_function
 
 import logging
