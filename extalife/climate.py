@@ -29,6 +29,12 @@ EXTA_HVAC_MODE = {
     False: HVAC_MODE_HEAT,
 }
 
+# map Exta Life notification "state" field
+EXTA_STATE_HVAC_MODE = {
+    1: HVAC_MODE_AUTO,
+    0: HVAC_MODE_HEAT,
+}
+
 # map Exta Life "work_mode" field
 HVAC_MODE_EXTA = {
     HVAC_MODE_AUTO: True,
@@ -153,12 +159,12 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        return float(int(self.channel_data.get("value")) / 10.0)
+        return float(int(self.channel_data.get("temperature")) / 10.0)
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        return float(self.channel_data.get("temperature") / 10.0)
+        return float(self.channel_data.get("value") / 10.0)
 
     def set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -168,8 +174,9 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
             return
         temp_el = temperature * 10.0
 
-        if self.action(ExtaLifeAPI.ACTN_SET_TMP, value=temp_el, work_mode=HVAC_MODE_EXTA[HVAC_MODE_HEAT]):
-            self.channel_data["temperature"] = temp_el
+        if self.action(ExtaLifeAPI.ACTN_SET_TMP, value=temp_el):
+            self.channel_data["value"] = temp_el
+            self.channel_data["work_mode"] = HVAC_MODE_EXTA[HVAC_MODE_HEAT]
             #self.channel_data["power"] = 1 if int(temp_el) > int(self.channel_data["value"]) else 0
             self.schedule_update_ha_state()
 
@@ -189,7 +196,8 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
         state = data.get("state")
 
         ch_data = self.channel_data.copy()
-        ch_data["power"] = 1 if state else 0
+        #ch_data["power"] = 1 if state else 0
+        ch_data["work_mode"] = EXTA_STATE_HVAC_MODE.get(state)
         ch_data["value"] = data.get("value")
 
         # update only if notification data contains new status; prevent HA event bus overloading
