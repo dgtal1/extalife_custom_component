@@ -23,7 +23,7 @@ PRESET_WINDOW_OPEN = "window_open"
 
 PRESETS = [PRESET_MANUAL, PRESET_AUTO, PRESET_WINDOW_OPEN]
 
-# map Exta Life "power" field
+# map Exta Life "work_mode" field
 EXTA_HVAC_MODE = {
     True: HVAC_MODE_AUTO,
     False: HVAC_MODE_HEAT,
@@ -66,7 +66,7 @@ HA_PRESET_ACTION = {
 }
 
 # map HA HVAC mode to Exta Life action
-HA_PRESET_ACTION = {
+HA_MODE_ACTION = {
     HVAC_MODE_AUTO: ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO,
     HVAC_MODE_HEAT: ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL
 }
@@ -118,7 +118,7 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
 
     def set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
-        if self.action(HA_PRESET_ACTION.get(hvac_mode), value=self.channel_data.get("value")):
+        if self.action(HA_MODE_ACTION.get(hvac_mode), value=self.channel_data.get("value")):
             self.channel_data["work_mode"] = HVAC_MODE_EXTA.get(hvac_mode)
             self.schedule_update_ha_state()
 
@@ -166,9 +166,11 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
 
         if temperature is None:
             return
+        temp_el = temperature * 10.0
 
-        if self.action(ExtaLifeAPI.ACTN_SET_TMP, value=temperature):
-            self.channel_data["temperature"] = temperature * 10
+        if self.action(ExtaLifeAPI.ACTN_SET_TMP, value=temp_el, work_mode=HVAC_MODE_EXTA[HVAC_MODE_HEAT]):
+            self.channel_data["temperature"] = temp_el
+            #self.channel_data["power"] = 1 if int(temp_el) > int(self.channel_data["value"]) else 0
             self.schedule_update_ha_state()
 
     @property
