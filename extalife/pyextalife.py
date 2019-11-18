@@ -1,4 +1,4 @@
-""" ExtaLife JSON API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
+""" ExtaLife JSN API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
 from __future__ import print_function
 
 import logging
@@ -325,7 +325,11 @@ class TCPAdapter:
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
         sock.settimeout(3)
-        data, address = sock.recvfrom(1024)
+        try:
+            data, address = sock.recvfrom(1024)
+        except Exception:
+            sock.close()
+            return False
         sock.close()
         log.debug("Got multicast response from EFC-01: %s", str(data.decode()))
         if data == b'{"status":"broadcast","command":0,"data":null}\x03':
@@ -362,13 +366,6 @@ class TCPAdapter:
 
             self.connect(self.host)
             self.tcp.send(cmd_ping.encode())
-
-        # self.tcp.setblocking(0)
-        # try:
-        #     self.tcp.recv(8192)
-        # except Exception:
-        #     pass
-        # self.tcp.setblocking(1)
 
     def exec_command(self, command, data, timeout=0.2):
         """
@@ -487,8 +484,6 @@ class TCPAdapter:
         # TODO: apply filter based on command type. eg command 20 (control) returns "notification" message and then "success" message
         data = []
         for elem in tcp_js:
-            # (elem["status"] == "searching" or elem["status"] == "success")
-            # elem["data"] is not None and
             if elem["command"] == command:
                 data.append(elem)
         return data
@@ -496,8 +491,8 @@ class TCPAdapter:
     @classmethod
     def parse_tcp_response(cls, tcp_data, command=None):
         """
-        2. reformat TCP JSON into valid JSON (concatenate the "searching" parts)
-        3. return TCP reformatted JSON
+        1. reformat TCP JSON into valid JSON (concatenate the "searching" parts)
+        2. return TCP reformatted JSON
         """
 
         # array
