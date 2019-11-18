@@ -82,8 +82,9 @@ def setup(hass, base_config):
             )
             return False
     except TCPConnError:
+        host = controller.host if controller.host else 'unknown'
         _LOGGER.error(
-            "Could not connect to EFC-01 on IP: %s", controller.host
+            "Could not connect to EFC-01 on IP: %s", host
         )
         return False
 
@@ -378,7 +379,4 @@ class ExtaLifeChannel(Entity):
         # update only if data found
         if data is not None:
             self.channel_data =  data
-
-
-
 
