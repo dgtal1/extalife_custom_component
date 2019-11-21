@@ -221,9 +221,9 @@ class ExtaLifeAPI:
             ExtaLifeAPI.ACTN_CLOSE: 0,
             ExtaLifeAPI.ACTN_STOP: 2,
             ExtaLifeAPI.ACTN_SET_POS: None,
-            ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO: 1,
-            ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL: 0,
-            ExtaLifeAPI.ACTN_SET_TMP: 0,
+            ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO: 0,
+            ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL: 1,
+            ExtaLifeAPI.ACTN_SET_TMP: 1,
         }
         ch_id, channel = channel_id.split("-")
         ch_id = int(ch_id)
