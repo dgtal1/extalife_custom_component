@@ -17,16 +17,9 @@ from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 _LOGGER = logging.getLogger(__name__)
 
 
-PRESET_MANUAL = "manual"
-PRESET_AUTO = "auto"
-PRESET_WINDOW_OPEN = "window_open"
-
-PRESETS = [PRESET_MANUAL, PRESET_AUTO, PRESET_WINDOW_OPEN]
-
-
 # Exta Life logic - TBC
-# set temp: set state to 1 and value. Controller returns state = 0. Probably state = 0 means work_mode should be set to false
-# set auto: set state to 0 and value=current_temp?. Controller returns state = 1. Probably state = 1 means work_mode should be set to true
+# set temp: set state to 1. Controller returns state = 0. State = 0 means work_mode should be set to false
+# set auto: set state to 0. Controller returns state = 1. State = 1 means work_mode should be set to true
 
 # map Exta Life "work_mode" field
 EXTA_HVAC_MODE = {
@@ -99,7 +92,8 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
 
     @property
     def hvac_action(self):
-        return EXTA_HVAC_ACTION.get(self.channel_data.get("power"))
+        # for now there's no data source to show it. data.power does not reflect this information
+        return None
 
     @property
     def hvac_mode(self):
