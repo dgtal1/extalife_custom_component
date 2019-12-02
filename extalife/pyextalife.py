@@ -1,4 +1,4 @@
-""" ExtaLife JSON API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
+""" ExtaLife JSN API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
 from __future__ import print_function
 
 import logging
@@ -20,11 +20,14 @@ DEVICE_ARR_COVER = [12, 25]
 DEVICE_ARR_LIGHT = [13, 26, 45, 27, 46]
 DEVICE_ARR_LIGHT_RGB = [27, 38]
 DEVICE_ARR_CLIMATE = [16]
+DEVICE_ARR_REPEATER = [237]
 
 DEVICE_ARR_ALL_SWITCH = DEVICE_ARR_SWITCH
 DEVICE_ARR_ALL_LIGHT = [*DEVICE_ARR_LIGHT, *DEVICE_ARR_LIGHT_RGB]
 DEVICE_ARR_ALL_COVER = [*DEVICE_ARR_COVER]
 DEVICE_ARR_ALL_CLIMATE = [*DEVICE_ARR_CLIMATE]
+DEVICE_ARR_ALL_IGNORE = [*DEVICE_ARR_REPEATER]
+
 # measurable magnitude/quantity:
 DEVICE_ARR_ALL_SENSOR_MEAS = [
     *DEVICE_ARR_SENS_TEMP,
@@ -218,9 +221,9 @@ class ExtaLifeAPI:
             ExtaLifeAPI.ACTN_CLOSE: 0,
             ExtaLifeAPI.ACTN_STOP: 2,
             ExtaLifeAPI.ACTN_SET_POS: None,
-            ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO: 1,
-            ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL: 0,
-            ExtaLifeAPI.ACTN_SET_TMP: 0,
+            ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO: 0,
+            ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL: 1,
+            ExtaLifeAPI.ACTN_SET_TMP: 1,
         }
         ch_id, channel = channel_id.split("-")
         ch_id = int(ch_id)
@@ -325,7 +328,11 @@ class TCPAdapter:
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
         sock.settimeout(3)
-        data, address = sock.recvfrom(1024)
+        try:
+            data, address = sock.recvfrom(1024)
+        except Exception:
+            sock.close()
+            return False
         sock.close()
         log.debug("Got multicast response from EFC-01: %s", str(data.decode()))
         if data == b'{"status":"broadcast","command":0,"data":null}\x03':
@@ -362,13 +369,6 @@ class TCPAdapter:
 
             self.connect(self.host)
             self.tcp.send(cmd_ping.encode())
-
-        # self.tcp.setblocking(0)
-        # try:
-        #     self.tcp.recv(8192)
-        # except Exception:
-        #     pass
-        # self.tcp.setblocking(1)
 
     def exec_command(self, command, data, timeout=0.2):
         """
@@ -487,8 +487,6 @@ class TCPAdapter:
         # TODO: apply filter based on command type. eg command 20 (control) returns "notification" message and then "success" message
         data = []
         for elem in tcp_js:
-            # (elem["status"] == "searching" or elem["status"] == "success")
-            # elem["data"] is not None and
             if elem["command"] == command:
                 data.append(elem)
         return data
@@ -496,8 +494,8 @@ class TCPAdapter:
     @classmethod
     def parse_tcp_response(cls, tcp_data, command=None):
         """
-        2. reformat TCP JSON into valid JSON (concatenate the "searching" parts)
-        3. return TCP reformatted JSON
+        1. reformat TCP JSON into valid JSON (concatenate the "searching" parts)
+        2. return TCP reformatted JSON
         """
 
         # array

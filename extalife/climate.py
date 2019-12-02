@@ -17,16 +17,20 @@ from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 _LOGGER = logging.getLogger(__name__)
 
 
-PRESET_MANUAL = "manual"
-PRESET_AUTO = "auto"
-PRESET_WINDOW_OPEN = "window_open"
+# Exta Life logic - TBC
+# set temp: set state to 1. Controller returns state = 0. State = 0 means work_mode should be set to false
+# set auto: set state to 0. Controller returns state = 1. State = 1 means work_mode should be set to true
 
-PRESETS = [PRESET_MANUAL, PRESET_AUTO, PRESET_WINDOW_OPEN]
-
-# map Exta Life "power" field
+# map Exta Life "work_mode" field
 EXTA_HVAC_MODE = {
     True: HVAC_MODE_AUTO,
     False: HVAC_MODE_HEAT,
+}
+
+# map Exta Life notification "state" field
+EXTA_STATE_HVAC_MODE = {
+    1: HVAC_MODE_AUTO,
+    0: HVAC_MODE_HEAT,
 }
 
 # map Exta Life "work_mode" field
@@ -47,32 +51,14 @@ HVAC_ACTION_EXTA = {
     CURRENT_HVAC_IDLE: 0
 }
 
-# map Exta Life "work_mode" field to presets
-EXTA_HA_PRESET = {
-    True: PRESET_AUTO,
-    False: PRESET_MANUAL
-}
-
-# map preset to Exta Life "state" (work_mode)
-PRESET_HA_EXTA = {
-    PRESET_AUTO: 1,
-    PRESET_MANUAL: 0
-}
-
-# map HA preset to Exta Life action
-HA_PRESET_ACTION = {
-    PRESET_AUTO: ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO,
-    PRESET_MANUAL: ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL
-}
-
 # map HA HVAC mode to Exta Life action
-HA_PRESET_ACTION = {
+HA_MODE_ACTION = {
     HVAC_MODE_AUTO: ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO,
     HVAC_MODE_HEAT: ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL
 }
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up ExtaLife switches."""
+    """Set up ExtaLife heat controllers."""
     if discovery_info is None:
         return
 
@@ -86,7 +72,7 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return SUPPORT_TARGET_TEMPERATURE  #| SUPPORT_PRESET_MODE
+        return SUPPORT_TARGET_TEMPERATURE
 
     @property
     def max_temp(self):
@@ -106,7 +92,8 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
 
     @property
     def hvac_action(self):
-        return EXTA_HVAC_ACTION.get(self.channel_data.get("power"))
+        # for now there's no data source to show it. data.power does not reflect this information
+        return None
 
     @property
     def hvac_mode(self):
@@ -117,32 +104,9 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
         return [HVAC_MODE_AUTO, HVAC_MODE_HEAT]
 
     def set_hvac_mode(self, hvac_mode):
-        """Set new target hvac mode."""
-        if self.action(HA_PRESET_ACTION.get(hvac_mode), value=self.channel_data.get("value")):
+        """Set new target hvac mode (heat, auto => manual, auto)."""
+        if self.action(HA_MODE_ACTION.get(hvac_mode), value=self.channel_data.get("value")):
             self.channel_data["work_mode"] = HVAC_MODE_EXTA.get(hvac_mode)
-            self.schedule_update_ha_state()
-
-    @property
-    def preset_mode(self):
-        """Return the current preset mode, e.g., home, away, temp.
-
-        Requires SUPPORT_PRESET_MODE.
-        """
-        return EXTA_HA_PRESET.get(self.channel_data.get("work_mode"))
-
-    @property
-    def preset_modes(self):
-        """Return a list of available preset modes.
-
-        Requires SUPPORT_PRESET_MODE.
-        """
-        return PRESETS
-
-    def set_preset_mode(self, preset_mode: str) -> None:
-        """Set new preset mode."""
-
-        if self.action(HA_PRESET_ACTION.get(preset_mode), value=self.channel_data.get("value")):
-            self.channel_data["work_mode"] = PRESET_HA_EXTA.get(preset_mode)
             self.schedule_update_ha_state()
 
     @property
@@ -153,12 +117,12 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        return float(int(self.channel_data.get("value")) / 10.0)
+        return float(int(self.channel_data.get("temperature")) / 10.0)
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        return float(self.channel_data.get("temperature") / 10.0)
+        return float(self.channel_data.get("value") / 10.0)
 
     def set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -166,9 +130,12 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
 
         if temperature is None:
             return
+        temp_el = temperature * 10.0
 
-        if self.action(ExtaLifeAPI.ACTN_SET_TMP, value=temperature):
-            self.channel_data["temperature"] = temperature * 10
+        if self.action(ExtaLifeAPI.ACTN_SET_TMP, value=temp_el):
+            self.channel_data["value"] = temp_el
+            self.channel_data["work_mode"] = HVAC_MODE_EXTA[HVAC_MODE_HEAT]
+            #self.channel_data["power"] = 1 if int(temp_el) > int(self.channel_data["value"]) else 0
             self.schedule_update_ha_state()
 
     @property
@@ -187,8 +154,9 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateDevice):
         state = data.get("state")
 
         ch_data = self.channel_data.copy()
-        ch_data["power"] = 1 if state else 0
-        ch_data["value"] = data.get("value")
+        #ch_data["power"] = 1 if state else 0
+        ch_data["work_mode"] = EXTA_STATE_HVAC_MODE.get(state)
+        ch_data["value"] = data.get("value")        # update set (target) temperature
 
         # update only if notification data contains new status; prevent HA event bus overloading
         if ch_data != self.channel_data:
