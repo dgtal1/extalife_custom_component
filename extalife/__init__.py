@@ -82,8 +82,9 @@ def setup(hass, base_config):
             )
             return False
     except TCPConnError:
+        host = controller.host if controller.host else 'unknown'
         _LOGGER.error(
-            "Could not connect to EFC-01 on IP: %s", controller.host
+            "Could not connect to EFC-01 on IP: %s", host
         )
         return False
 
@@ -110,7 +111,7 @@ def discover_devices(hass, hass_config):
     """
     from .pyextalife import (DEVICE_ARR_ALL_SWITCH, DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_ALL_COVER,
                              DEVICE_ARR_ALL_SENSOR, DEVICE_ARR_ALL_CLIMATE, DEVICE_ARR_ALL_SENSOR_MEAS, DEVICE_ARR_ALL_SENSOR_BINARY, DEVICE_ARR_ALL_SENSOR_MULTI,
-                             DEVICE_ICON_ARR_LIGHT)
+                             DEVICE_ICON_ARR_LIGHT, DEVICE_ARR_ALL_IGNORE)
     component_configs = {}
 
     # get data from the StatusPoller object stored in HA object data
@@ -126,6 +127,11 @@ def discover_devices(hass, hass_config):
             continue
 
         component_name = None
+
+        # skip some devices that are not to be shown nor controlled by HA
+        if chn_type in DEVICE_ARR_ALL_IGNORE:
+            continue
+
         if chn_type in DEVICE_ARR_ALL_SWITCH:
             icon = channel["data"]["icon"]
             if icon in DEVICE_ICON_ARR_LIGHT:
@@ -378,7 +384,4 @@ class ExtaLifeChannel(Entity):
         # update only if data found
         if data is not None:
             self.channel_data =  data
-
-
-
 
