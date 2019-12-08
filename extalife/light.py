@@ -71,18 +71,20 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             else:
                 params.update({"value": data.get("value")})
 
+        mode_val = self.channel_data.get("mode_val")
         _LOGGER.debug("white value: %s", kwargs)
+        _LOGGER.debug("'mode_val' value: %s", mode_val)
 
         # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
         if self._supported_flags & SUPPORT_WHITE_VALUE:
             if not kwargs.get(ATTR_WHITE_VALUE):
-                w = int(self.channel_data.get("mode_val"), 16) & 255    # default
+                w = int(mode_val, 16) & 255    # default
             else:
                 w = int(kwargs.get(ATTR_WHITE_VALUE)) & 255
 
         if self._supported_flags & SUPPORT_COLOR:
             if not kwargs.get(ATTR_HS_COLOR):
-                rgb = int(self.channel_data.get("mode_val"), 16)    # default
+                rgb = int(mode_val, 16)    # default
             else:
                 hs = kwargs.get(ATTR_HS_COLOR)  # should return a tuple (h, s)
                 rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
