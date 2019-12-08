@@ -191,7 +191,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             if isinstance(mode_val, int):
                 self.channel_data["mode_val"] = int(self.channel_data.get("mode_val_hex"), 16)
             if isinstance(mode_val, str):
-                self.channel_data["mode_val"] = self.channel_data("mode_val_hex")
+                self.channel_data["mode_val"] = self.channel_data.get("mode_val_hex")
 
             ch_data["mode_val"] = data.get("mode_val")
 
