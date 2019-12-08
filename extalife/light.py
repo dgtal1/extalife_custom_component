@@ -56,6 +56,17 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         if dev_type in DEVICE_ARR_LIGHT_RGB:
             self._supported_flags |= SUPPORT_COLOR | SUPPORT_WHITE_VALUE
 
+    def update(self):
+        super().update()
+        # set internal mode_val representation as new field mode_val_hex. Canonicalise to hex string 'RRGGBBWW'
+        mode_val = self.channel_data.get("mode_val")
+        if isinstance(mode_val, int):
+            mode_val_hex = (hex(mode_val)[2:]).upper()
+        elif isinstance(mode_val, str):
+            mode_val_hex = mode_val
+        if mode_val_hex:
+            self.channel_data["mode_val_hex"] = mode_val_hex
+
     def turn_on(self, **kwargs):
         """Turn on the switch."""
         data = self.channel_data
@@ -72,19 +83,21 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
                 params.update({"value": data.get("value")})
 
         mode_val = self.channel_data.get("mode_val")
+        mode_val_hex = self.channel_data.get("mode_val_hex")
         _LOGGER.debug("white value: %s", kwargs)
         _LOGGER.debug("'mode_val' value: %s", mode_val)
+        _LOGGER.debug("'mode_val_hex' value: %s", mode_val_hex)
 
         # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
         if self._supported_flags & SUPPORT_WHITE_VALUE:
             if not kwargs.get(ATTR_WHITE_VALUE):
-                w = int(mode_val, 16) & 255    # default
+                w = int(mode_val_hex, 16) & 255    # default
             else:
                 w = int(kwargs.get(ATTR_WHITE_VALUE)) & 255
 
         if self._supported_flags & SUPPORT_COLOR:
             if not kwargs.get(ATTR_HS_COLOR):
-                rgb = int(mode_val, 16)    # default
+                rgb = int(mode_val_hex, 16)    # default
             else:
                 hs = kwargs.get(ATTR_HS_COLOR)  # should return a tuple (h, s)
                 rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
@@ -99,9 +112,9 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         if self.action(ExtaLifeAPI.ACTN_TURN_ON, **params):
             data["power"] = 1
             mode_val = params.get("mode_val")
-            # convert int back to hex string 🤦‍♂️
             if mode_val:
-                params["mode_val"] = (hex(mode_val)[2:]).upper()
+                params.pop("mode_val")      # do not update mode_val, but insert internal field mode_val_hex
+                params["mode_val_hex"] = (hex(mode_val)[2:]).upper()
             data.update(params)
             self.schedule_update_ha_state()
 
@@ -112,9 +125,9 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         mode = data.get("mode")
         if mode:
             params.update({"mode": mode})
-        mode_val = data.get("mode_val")
-        if mode_val:
-            params.update({"mode_val": int(mode_val, 16)})
+        mode_val_hex = data.get("mode_val_hex")
+        if mode_val_hex:
+            params.update({"mode_val": int(mode_val_hex, 16)})
         value = data.get("value")
         if value:
             params.update({"value": value})
@@ -139,8 +152,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
     @property
     def hs_color(self):
         """ Device colour setting """
-        # TODO: need some research to implement this for SLR22
-        rgbw = int(self.channel_data.get("mode_val"), 16)
+        rgbw = int(self.channel_data.get("mode_val_hex"), 16)
         rgb = rgbw >> 8
         r = rgb >> 16
         g = (rgb >> 8) & 255
@@ -151,7 +163,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
     @property
     def white_value(self):
-        rgbw = int(self.channel_data.get("mode_val"), 16)
+        rgbw = int(self.channel_data.get("mode_val_hex"), 16)
         return rgbw & 255
 
     @property
@@ -173,6 +185,13 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             ch_data["value"] = data.get("value")
 
         if self._supported_flags & SUPPORT_COLOR:
+            # synchronize mode_val and internal mode_val_hex here before comparison
+            mode_val = self.channel_data.get("mode_val")
+            if isinstance(mode_val, int):
+                self.channel_data["mode_val"] = int(self.channel_data.get("mode_val_hex"), 16)
+            if isinstance(mode_val, str):
+                self.channel_data["mode_val"] = self.channel_data("mode_val_hex")
+
             ch_data["mode_val"] = data.get("mode_val")
 
         # update only if notification data contains new status; prevent HS event bus overloading
