@@ -64,7 +64,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             mode_val_hex = (hex(mode_val)[2:]).upper()
         elif isinstance(mode_val, str):
             mode_val_hex = mode_val
-        if mode_val_hex:
+        if mode_val:
             self.channel_data["mode_val_hex"] = mode_val_hex
 
     def turn_on(self, **kwargs):
