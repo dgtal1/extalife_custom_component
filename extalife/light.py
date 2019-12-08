@@ -60,11 +60,12 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         super().update()
         # set internal mode_val representation as new field mode_val_hex. Canonicalise to hex string 'RRGGBBWW'
         mode_val = self.channel_data.get("mode_val")
+        mode_val_hex = None
         if isinstance(mode_val, int):
             mode_val_hex = (hex(mode_val)[2:]).upper()
         elif isinstance(mode_val, str):
             mode_val_hex = mode_val
-        if mode_val:
+        if mode_val_hex:
             self.channel_data["mode_val_hex"] = mode_val_hex
 
     def turn_on(self, **kwargs):
