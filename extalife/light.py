@@ -73,15 +73,16 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
         _LOGGER.debug("white value: %s", kwargs)
 
+        # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
         if self._supported_flags & SUPPORT_WHITE_VALUE:
             if not kwargs.get(ATTR_WHITE_VALUE):
-                w = int(self.channel_data.get("mode_val")) & 255    # default
+                w = int(self.channel_data.get("mode_val"), 16) & 255    # default
             else:
                 w = int(kwargs.get(ATTR_WHITE_VALUE)) & 255
 
         if self._supported_flags & SUPPORT_COLOR:
             if not kwargs.get(ATTR_HS_COLOR):
-                rgb = int(self.channel_data.get("mode_val"))    # default
+                rgb = int(self.channel_data.get("mode_val"), 16)    # default
             else:
                 hs = kwargs.get(ATTR_HS_COLOR)  # should return a tuple (h, s)
                 rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
@@ -95,6 +96,10 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
         if self.action(ExtaLifeAPI.ACTN_TURN_ON, **params):
             data["power"] = 1
+            mode_val = params.get("mode_val")
+            # convert int back to hex string 🤦‍♂️
+            if mode_val:
+                params["mode_val"] = (hex(mode_val)[2:]).upper()
             data.update(params)
             self.schedule_update_ha_state()
 
@@ -107,7 +112,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             params.update({"mode": mode})
         mode_val = data.get("mode_val")
         if mode_val:
-            params.update({"mode_val": mode_val})
+            params.update({"mode_val": int(mode_val, 16)})
         value = data.get("value")
         if value:
             params.update({"value": value})
@@ -133,7 +138,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
     def hs_color(self):
         """ Device colour setting """
         # TODO: need some research to implement this for SLR22
-        rgbw = int(self.channel_data.get("mode_val"))
+        rgbw = int(self.channel_data.get("mode_val"), 16)
         rgb = rgbw >> 8
         r = rgb >> 16
         g = (rgb >> 8) & 255
@@ -144,8 +149,8 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
     @property
     def white_value(self):
-        rgbw = self.channel_data.get("mode_val")
-        return int(rgbw & 255)
+        rgbw = int(self.channel_data.get("mode_val"), 16)
+        return rgbw & 255
 
     @property
     def is_on(self):
