@@ -126,7 +126,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             _LOGGER.debug("RGB value: %s. W value: %s", rgb, w)
             rgbw = rgb | w
             params.update({"mode_val": rgbw})
-            params.update({"mode": 0})  # white component only = false
+            params.update({"mode": 1})  # mode - still light or predefined programs; set it as still light
 
         if self.action(ExtaLifeAPI.ACTN_TURN_ON, **params):
             # update channel data with new values
@@ -143,6 +143,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         params = dict()
         mode = data.get("mode")
         if mode:
+            mode = 1
             params.update({"mode": mode})
         mode_val = data.get("mode_val")
         if mode_val:
@@ -153,6 +154,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
         if self.action(ExtaLifeAPI.ACTN_TURN_OFF, **params):
             data["power"] = 0
+            data["mode"] = mode
             self.schedule_update_ha_state()
 
     @property
