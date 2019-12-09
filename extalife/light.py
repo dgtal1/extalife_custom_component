@@ -66,7 +66,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         elif isinstance(mode_val, str):
             mode_val_hex = mode_val
         if mode_val_hex:
-            _LOGGER.debug("Data update callback for entity: %s(%s). mode_val_hex: %s", self.entity_id, self.channel_id, mode_val_hex)
+            _LOGGER.debug("Data update callback for entity: %s(%s). mode_val_hex: %s. mode_val: %s", self.entity_id, self.channel_id, mode_val_hex, mode_val)
             self.channel_data["mode_val_hex"] = mode_val_hex
 
     def turn_on(self, **kwargs):
