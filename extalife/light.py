@@ -66,6 +66,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         elif isinstance(mode_val, str):
             mode_val_hex = mode_val
         if mode_val_hex:
+            _LOGGER.debug("Data update callback for entity: %s(%s). mode_val_hex: %s", self.entity_id, self.channel_id, mode_val_hex)
             self.channel_data["mode_val_hex"] = mode_val_hex
 
     def turn_on(self, **kwargs):
@@ -87,7 +88,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         mode_val_hex = self.channel_data.get("mode_val_hex")
         _LOGGER.debug("white value: %s", kwargs)
         _LOGGER.debug("'mode_val' value: %s", mode_val)
-        _LOGGER.debug("'mode_val_hex' value: %s", mode_val_hex)
+        _LOGGER.debug("turn_on for entity: %s(%s). mode_val_hex: %s", self.entity_id, self.channel_id, mode_val_hex)
 
         # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
         if self._supported_flags & SUPPORT_WHITE_VALUE:
