@@ -181,7 +181,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
     @property
     def white_value(self):
-        rgbw = modevaltoint(self.channel_data.get("mode_val_hex"))
+        rgbw = modevaltoint(self.channel_data.get("mode_val"))
         return rgbw & 255
 
     @property
@@ -209,5 +209,4 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         # update only if notification data contains new status; prevent HS event bus overloading
         if ch_data != self.channel_data:
             self.channel_data.update(ch_data)
-            # mode_val_hex will be updated by update() method trigered by below call
             self.async_schedule_update_ha_state(True)
