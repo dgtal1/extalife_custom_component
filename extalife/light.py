@@ -102,7 +102,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
         mode_val = self.channel_data.get("mode_val")
         mode_val_int = modevaltoint(mode_val)
-        _LOGGER.debug("white value: %s", kwargs)
+        _LOGGER.debug("kwargs: %s", kwargs)
         _LOGGER.debug("'mode_val' value: %s", mode_val)
         _LOGGER.debug("turn_on for entity: %s(%s). mode_val_int: %s", self.entity_id, self.channel_id, mode_val_int)
 
@@ -123,7 +123,8 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
         if self._supported_flags & SUPPORT_WHITE_VALUE and self._supported_flags & SUPPORT_COLOR:
             # Exta Life colors in SLR22 are 4 bytes: RGBW
-            rgbw = rgb & w
+            _LOGGER.debug("RGB value: %s. W value: %s", rgb, w)
+            rgbw = rgb | w
             params.update({"mode_val": rgbw})
             params.update({"mode": 0})  # white component only = false
 
