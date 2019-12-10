@@ -211,6 +211,9 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
     @property
     def effect(self):
+        mode = self.channel_data.get("mode")
+        if not mode or mode != 2
+            return None
         mode_val = self.channel_data.get("mode_val")
         if not mode_val:
             return None
