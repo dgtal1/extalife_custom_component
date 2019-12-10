@@ -6,15 +6,55 @@ import logging
 from pprint import pformat
 from .pyextalife import ExtaLifeAPI
 
-from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_WHITE_VALUE, ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_WHITE_VALUE)
+from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_WHITE_VALUE, SUPPORT_EFFECT, ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_WHITE_VALUE, ATTR_EFFECT)
 from . import ExtaLifeChannel
 
 
-from .pyextalife import DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_LIGHT_RGB
+from .pyextalife import DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_LIGHT_RGB, DEVICE_ARR_LIGHT_RGBW, DEVICE_ARR_LIGHT_EFFECT
 
 import homeassistant.util.color as color_util
 _LOGGER = logging.getLogger(__name__)
 
+EFFECT_1 = "Program 1"
+EFFECT_2 = "Program 2"
+EFFECT_3 = "Program 3"
+EFFECT_4 = "Program 4"
+EFFECT_5 = "Program 5"
+EFFECT_6 = "Program 6"
+EFFECT_7 = "Program 7"
+EFFECT_8 = "Program 8"
+EFFECT_9 = "Program 9"
+EFFECT_10 = "Program 10"
+EFFECT_FLOAT = "Floating"
+EFFECT_LIST = [EFFECT_1, EFFECT_2, EFFECT_3, EFFECT_4, EFFECT_5, EFFECT_6, EFFECT_7, EFFECT_8, EFFECT_9, EFFECT_10, EFFECT_FLOAT]
+EFFECT_LIST_SLR = EFFECT_LIST
+
+MAP_MODE_VAL_EFFECT: {
+    0: EFFECT_FLOAT,
+    1: EFFECT_1,
+    2: EFFECT_2,
+    3: EFFECT_3,
+    4: EFFECT_4,
+    5: EFFECT_5,
+    6: EFFECT_6,
+    7: EFFECT_7,
+    8: EFFECT_8,
+    9: EFFECT_9,
+    10: EFFECT_10,
+}
+MAP_EFFECT_MODE_VAL: {
+    EFFECT_FLOAT: 0,
+    EFFECT_1: 1,
+    EFFECT_2: 2,
+    EFFECT_3: 3,
+    EFFECT_4: 4,
+    EFFECT_5: 5,
+    EFFECT_6: 6,
+    EFFECT_7: 7,
+    EFFECT_8: 8,
+    EFFECT_9: 9,
+    EFFECT_10: 10,
+}
 
 def scaleto255(value):
     """Scale the input value from 0-100 to 0-255."""
@@ -75,6 +115,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         super().__init__(channel_data)
 
         self._supported_flags = 0
+        self.effect_list = None
         self.channel_data = channel_data.get("data")
 
         dev_type = self.channel_data.get("type")
@@ -82,8 +123,15 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         if dev_type in DEVICE_ARR_ALL_LIGHT:
             self._supported_flags |= SUPPORT_BRIGHTNESS
 
-        if dev_type in DEVICE_ARR_LIGHT_RGB:
+        if dev_type in DEVICE_ARR_LIGHT_RGBW:
             self._supported_flags |= SUPPORT_COLOR | SUPPORT_WHITE_VALUE
+        elif dev_type in DEVICE_ARR_LIGHT_RGB:
+            self._supported_flags |= SUPPORT_COLOR
+
+        if dev_type in DEVICE_ARR_LIGHT_EFFECT:
+            self._supported_flags |= SUPPORT_EFFECT
+            if dev_type in [27, 38]:
+                self.effect_list = EFFECT_LIST_SLR
 
     def turn_on(self, **kwargs):
         """Turn on the switch."""
@@ -102,38 +150,43 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
         mode_val = self.channel_data.get("mode_val")
         mode_val_int = modevaltoint(mode_val)
+        effect = kwargs.get(ATTR_EFFECT)
         _LOGGER.debug("kwargs: %s", kwargs)
         _LOGGER.debug("'mode_val' value: %s", mode_val)
         _LOGGER.debug("turn_on for entity: %s(%s). mode_val_int: %s", self.entity_id, self.channel_id, mode_val_int)
 
         # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
-        if self._supported_flags & SUPPORT_WHITE_VALUE:
+        if self._supported_flags & SUPPORT_WHITE_VALUE and not effect:
             if not kwargs.get(ATTR_WHITE_VALUE):
                 w = mode_val_int & 255    # default
             else:
                 w = int(kwargs.get(ATTR_WHITE_VALUE)) & 255
 
-        if self._supported_flags & SUPPORT_COLOR:
+        if self._supported_flags & SUPPORT_COLOR and not effect:
             if not kwargs.get(ATTR_HS_COLOR):
-                rgb = mode_val_int    # default
+                rgb = mode_val_int >> 8  # default
             else:
                 hs = kwargs.get(ATTR_HS_COLOR)  # should return a tuple (h, s)
                 rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
-                rgb = (int(rgb[0]) << 24) | (int(rgb[1]) << 16) | (int(rgb[2]) << 8)
+                rgb = (int(rgb[0]) << 16) | (int(rgb[1]) << 8) | (int(rgb[2]))
 
-        if self._supported_flags & SUPPORT_WHITE_VALUE and self._supported_flags & SUPPORT_COLOR:
+        if self._supported_flags & SUPPORT_WHITE_VALUE and self._supported_flags & SUPPORT_COLOR and not effect:
             # Exta Life colors in SLR22 are 4 bytes: RGBW
             _LOGGER.debug("RGB value: %s. W value: %s", rgb, w)
-            rgbw = rgb | w
+            rgbw = (rgb << 8) | w       # merge RGB & W
             params.update({"mode_val": rgbw})
             params.update({"mode": 1})  # mode - still light or predefined programs; set it as still light
+
+        if effect:
+            params.update({"mode": 2}) # mode - turn on effect
+            params.update({"mode_val": MAP_EFFECT_MODE_VAL[effect]})  # mode - one of effects
 
         if self.action(ExtaLifeAPI.ACTN_TURN_ON, **params):
             # update channel data with new values
             data["power"] = 1
             mode_val_new = params.get("mode_val")
             if mode_val_new:
-                params["mode_val"] = modeval_upd(mode_val, mode_val_new)      # convert new value to the format of the old value from channel_data
+                params["mode_val"] = modeval_upd(mode_val, mode_val_new)  # convert new value to the format of the old value from channel_data
             data.update(params)
             self.schedule_update_ha_state()
 
@@ -143,7 +196,6 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         params = dict()
         mode = data.get("mode")
         if mode:
-            mode = 1
             params.update({"mode": mode})
         mode_val = data.get("mode_val")
         if mode_val:
@@ -156,6 +208,17 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             data["power"] = 0
             data["mode"] = mode
             self.schedule_update_ha_state()
+
+    @property
+    def effect(self):
+        mode_val = self.channel_data.get("mode_val")
+        if not mode_val:
+            return None
+        return MAP_MODE_VAL_EFFECT[mode_val]
+
+    @property
+    def effect_list(self):
+        return self.effect_list
 
     @property
     def brightness(self):
