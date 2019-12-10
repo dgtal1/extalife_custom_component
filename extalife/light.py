@@ -115,7 +115,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         super().__init__(channel_data)
 
         self._supported_flags = 0
-        self.effect_list = None
+        self._effect_list = None
         self.channel_data = channel_data.get("data")
 
         dev_type = self.channel_data.get("type")
@@ -131,7 +131,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         if dev_type in DEVICE_ARR_LIGHT_EFFECT:
             self._supported_flags |= SUPPORT_EFFECT
             if dev_type in [27, 38]:
-                self.effect_list = EFFECT_LIST_SLR
+                self._effect_list = EFFECT_LIST_SLR
 
     def turn_on(self, **kwargs):
         """Turn on the switch."""
@@ -218,7 +218,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
     @property
     def effect_list(self):
-        return self.effect_list
+        return self._effect_list
 
     @property
     def brightness(self):
