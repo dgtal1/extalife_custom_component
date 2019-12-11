@@ -217,7 +217,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         mode_val = self.channel_data.get("mode_val")
         if not mode_val:
             return None
-        return MAP_MODE_VAL_EFFECT[mode_val]
+        return MAP_MODE_VAL_EFFECT[modevaltoint(mode_val)]
 
     @property
     def effect_list(self):
