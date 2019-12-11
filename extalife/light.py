@@ -6,15 +6,55 @@ import logging
 from pprint import pformat
 from .pyextalife import ExtaLifeAPI
 
-from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_WHITE_VALUE, ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_WHITE_VALUE)
+from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_WHITE_VALUE, SUPPORT_EFFECT, ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_WHITE_VALUE, ATTR_EFFECT)
 from . import ExtaLifeChannel
 
 
-from .pyextalife import DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_LIGHT_RGB
+from .pyextalife import DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_LIGHT_RGB, DEVICE_ARR_LIGHT_RGBW, DEVICE_ARR_LIGHT_EFFECT
 
 import homeassistant.util.color as color_util
 _LOGGER = logging.getLogger(__name__)
 
+EFFECT_1 = "Program 1"
+EFFECT_2 = "Program 2"
+EFFECT_3 = "Program 3"
+EFFECT_4 = "Program 4"
+EFFECT_5 = "Program 5"
+EFFECT_6 = "Program 6"
+EFFECT_7 = "Program 7"
+EFFECT_8 = "Program 8"
+EFFECT_9 = "Program 9"
+EFFECT_10 = "Program 10"
+EFFECT_FLOAT = "Floating"
+EFFECT_LIST = [EFFECT_1, EFFECT_2, EFFECT_3, EFFECT_4, EFFECT_5, EFFECT_6, EFFECT_7, EFFECT_8, EFFECT_9, EFFECT_10, EFFECT_FLOAT]
+EFFECT_LIST_SLR = EFFECT_LIST
+
+MAP_MODE_VAL_EFFECT = {
+    0: EFFECT_FLOAT,
+    1: EFFECT_1,
+    2: EFFECT_2,
+    3: EFFECT_3,
+    4: EFFECT_4,
+    5: EFFECT_5,
+    6: EFFECT_6,
+    7: EFFECT_7,
+    8: EFFECT_8,
+    9: EFFECT_9,
+    10: EFFECT_10,
+}
+MAP_EFFECT_MODE_VAL = {
+    EFFECT_FLOAT: 0,
+    EFFECT_1: 1,
+    EFFECT_2: 2,
+    EFFECT_3: 3,
+    EFFECT_4: 4,
+    EFFECT_5: 5,
+    EFFECT_6: 6,
+    EFFECT_7: 7,
+    EFFECT_8: 8,
+    EFFECT_9: 9,
+    EFFECT_10: 10,
+}
 
 def scaleto255(value):
     """Scale the input value from 0-100 to 0-255."""
@@ -28,6 +68,35 @@ def scaleto100(value):
         return 1
     return int(max(0, min(100, ((value * 100.0) / 255.0))))
 
+def modevaltohex(mode_val):
+    """ convert mode_val value that can be either xeh string or int to a hex string """
+    if isinstance(mode_val, int):
+        return (hex(mode_val)[2:]).upper()
+    if isinstance(mode_val, str):
+        return mode_val
+    return None
+
+def modevaltoint(mode_val):
+    """ convert mode_val value that can be either xeh string or int to int """
+    if isinstance(mode_val, str):
+        return int(mode_val, 16)
+    if isinstance(mode_val, int):
+        return mode_val
+    return None
+
+def modeval_upd(old, new):
+    """ Update mode_val contextually. Convert to type of the old value and update"""
+    if isinstance(old, int):
+        if isinstance(new, int):
+            return new
+        return modevaltoint(new)
+
+    if isinstance(old, str):
+        if isinstance(new, str):
+            return new
+        return modevaltohex(new)
+
+    return None
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up ExtaLife lighs."""
@@ -46,6 +115,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         super().__init__(channel_data)
 
         self._supported_flags = 0
+        self._effect_list = None
         self.channel_data = channel_data.get("data")
 
         dev_type = self.channel_data.get("type")
@@ -53,13 +123,21 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         if dev_type in DEVICE_ARR_ALL_LIGHT:
             self._supported_flags |= SUPPORT_BRIGHTNESS
 
-        if dev_type in DEVICE_ARR_LIGHT_RGB:
+        if dev_type in DEVICE_ARR_LIGHT_RGBW:
             self._supported_flags |= SUPPORT_COLOR | SUPPORT_WHITE_VALUE
+        elif dev_type in DEVICE_ARR_LIGHT_RGB:
+            self._supported_flags |= SUPPORT_COLOR
+
+        if dev_type in DEVICE_ARR_LIGHT_EFFECT:
+            self._supported_flags |= SUPPORT_EFFECT
+            if dev_type in [27, 38]:
+                self._effect_list = EFFECT_LIST_SLR
 
     def turn_on(self, **kwargs):
         """Turn on the switch."""
         data = self.channel_data
         params = dict()
+        rgb = w = None
         if self._supported_flags & SUPPORT_BRIGHTNESS:
             target_brightness = kwargs.get(ATTR_BRIGHTNESS)
 
@@ -70,41 +148,80 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             else:
                 params.update({"value": data.get("value")})
 
-        _LOGGER.debug("white value: %s", kwargs)
+        mode_val = self.channel_data.get("mode_val")
+        mode_val_int = modevaltoint(mode_val)
+        effect = kwargs.get(ATTR_EFFECT)
+        _LOGGER.debug("kwargs: %s", kwargs)
+        _LOGGER.debug("'mode_val' value: %s", mode_val)
+        _LOGGER.debug("turn_on for entity: %s(%s). mode_val_int: %s", self.entity_id, self.channel_id, mode_val_int)
 
-        if self._supported_flags & SUPPORT_COLOR:
-            target_color = kwargs.get(ATTR_HS_COLOR)
-
-            # Exta Life colors in SLR22 are 4 bytes: RGBW
-            # HA passes either color or white value information
-            if target_color is not None:
-                # We set it to the target brightness and turn it on
-                w = int(data.get("mode_val")) & 255
-                hs = kwargs.get(ATTR_HS_COLOR)          # should return a tuple (h, s)
-                rgb = color_util.color_hs_to_RGB(*hs)   # returns a tuple (R, G, B)
-                rgbw = (int(rgb[0]) << 24) | (int(rgb[1]) << 16) | (int(rgb[2]) << 8) | int(w)
-                params.update({"mode_val": rgbw})
-                params.update({"mode": 0})      # white component only = false
+        # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
+        if self._supported_flags & SUPPORT_WHITE_VALUE and effect is None:
+            if kwargs.get(ATTR_WHITE_VALUE) is None:
+                w = mode_val_int & 255    # default
             else:
                 w = int(kwargs.get(ATTR_WHITE_VALUE)) & 255
-                rgbw = int(data.get("mode_val")) | w            # get RGB from channel data and new value from HA
-                params.update({"mode_val": rgbw})
-                params.update({"mode": 1})  # white component only = true
 
-        #self.action(ExtaLifeAPI.ACTN_TURN_ON)
+        if self._supported_flags & SUPPORT_COLOR and effect is None:
+            if not kwargs.get(ATTR_HS_COLOR):
+                rgb = mode_val_int >> 8  # default
+            else:
+                hs = kwargs.get(ATTR_HS_COLOR)  # should return a tuple (h, s)
+                rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
+                rgb = (int(rgb[0]) << 16) | (int(rgb[1]) << 8) | (int(rgb[2]))
+
+        if self._supported_flags & SUPPORT_WHITE_VALUE and self._supported_flags & SUPPORT_COLOR and effect is None:
+            # Exta Life colors in SLR22 are 4 bytes: RGBW
+            _LOGGER.debug("RGB value: %s. W value: %s", rgb, w)
+            rgbw = (rgb << 8) | w       # merge RGB & W
+            params.update({"mode_val": rgbw})
+            params.update({"mode": 1})  # mode - still light or predefined programs; set it as still light
+
+        if effect is not None:
+            params.update({"mode": 2}) # mode - turn on effect
+            params.update({"mode_val": MAP_EFFECT_MODE_VAL[effect]})  # mode - one of effects
+
         if self.action(ExtaLifeAPI.ACTN_TURN_ON, **params):
+            # update channel data with new values
             data["power"] = 1
+            mode_val_new = params.get("mode_val")
+            if mode_val_new is not None:
+                params["mode_val"] = modeval_upd(mode_val, mode_val_new)  # convert new value to the format of the old value from channel_data
             data.update(params)
             self.schedule_update_ha_state()
 
     def turn_off(self, **kwargs):
         """Turn off the switch."""
         data = self.channel_data
+        params = dict()
+        mode = data.get("mode")
+        if mode is not None:
+            params.update({"mode": mode})
+        mode_val = data.get("mode_val")
+        if mode_val is not None:
+            params.update({"mode_val": modevaltoint(mode_val)})
+        value = data.get("value")
+        if value is not None:
+            params.update({"value": value})
 
-        if self.action(ExtaLifeAPI.ACTN_TURN_OFF, value=data.get("value")):
-
+        if self.action(ExtaLifeAPI.ACTN_TURN_OFF, **params):
             data["power"] = 0
+            data["mode"] = mode
             self.schedule_update_ha_state()
+
+    @property
+    def effect(self):
+        mode = self.channel_data.get("mode")
+        if mode is None or mode != 2:
+            return None
+        mode_val = self.channel_data.get("mode_val")
+        if mode_val is None:
+            return None
+        return MAP_MODE_VAL_EFFECT[modevaltoint(mode_val)]
+
+    @property
+    def effect_list(self):
+        return self._effect_list
 
     @property
     def brightness(self):
@@ -122,8 +239,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
     @property
     def hs_color(self):
         """ Device colour setting """
-        # TODO: need some research to implement this for SLR22
-        rgbw = self.channel_data.get("mode_val")
+        rgbw = modevaltoint(self.channel_data.get("mode_val"))
         rgb = rgbw >> 8
         r = rgb >> 16
         g = (rgb >> 8) & 255
@@ -134,8 +250,8 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
     @property
     def white_value(self):
-        rgbw = self.channel_data.get("mode_val")
-        return int(rgbw & 255)
+        rgbw = modevaltoint(self.channel_data.get("mode_val"))
+        return rgbw & 255
 
     @property
     def is_on(self):
@@ -156,7 +272,8 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             ch_data["value"] = data.get("value")
 
         if self._supported_flags & SUPPORT_COLOR:
-            ch_data["mode_val"] = data.get("mode_val")
+            mode_val = ch_data.get("mode_val")
+            ch_data["mode_val"] = modeval_upd(mode_val, data.get("mode_val"))
 
         # update only if notification data contains new status; prevent HS event bus overloading
         if ch_data != self.channel_data:
