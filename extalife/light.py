@@ -156,13 +156,13 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         _LOGGER.debug("turn_on for entity: %s(%s). mode_val_int: %s", self.entity_id, self.channel_id, mode_val_int)
 
         # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
-        if self._supported_flags & SUPPORT_WHITE_VALUE and not effect:
-            if not kwargs.get(ATTR_WHITE_VALUE):
+        if self._supported_flags & SUPPORT_WHITE_VALUE and effect is None:
+            if kwargs.get(ATTR_WHITE_VALUE) is None:
                 w = mode_val_int & 255    # default
             else:
                 w = int(kwargs.get(ATTR_WHITE_VALUE)) & 255
 
-        if self._supported_flags & SUPPORT_COLOR and not effect:
+        if self._supported_flags & SUPPORT_COLOR and effect is None:
             if not kwargs.get(ATTR_HS_COLOR):
                 rgb = mode_val_int >> 8  # default
             else:
@@ -170,14 +170,14 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
                 rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
                 rgb = (int(rgb[0]) << 16) | (int(rgb[1]) << 8) | (int(rgb[2]))
 
-        if self._supported_flags & SUPPORT_WHITE_VALUE and self._supported_flags & SUPPORT_COLOR and not effect:
+        if self._supported_flags & SUPPORT_WHITE_VALUE and self._supported_flags & SUPPORT_COLOR and effect is None:
             # Exta Life colors in SLR22 are 4 bytes: RGBW
             _LOGGER.debug("RGB value: %s. W value: %s", rgb, w)
             rgbw = (rgb << 8) | w       # merge RGB & W
             params.update({"mode_val": rgbw})
             params.update({"mode": 1})  # mode - still light or predefined programs; set it as still light
 
-        if effect:
+        if effect is not None:
             params.update({"mode": 2}) # mode - turn on effect
             params.update({"mode_val": MAP_EFFECT_MODE_VAL[effect]})  # mode - one of effects
 
@@ -185,7 +185,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             # update channel data with new values
             data["power"] = 1
             mode_val_new = params.get("mode_val")
-            if mode_val_new:
+            if mode_val_new is not None:
                 params["mode_val"] = modeval_upd(mode_val, mode_val_new)  # convert new value to the format of the old value from channel_data
             data.update(params)
             self.schedule_update_ha_state()
@@ -195,13 +195,13 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         data = self.channel_data
         params = dict()
         mode = data.get("mode")
-        if mode:
+        if mode is not None:
             params.update({"mode": mode})
         mode_val = data.get("mode_val")
-        if mode_val:
+        if mode_val is not None:
             params.update({"mode_val": modevaltoint(mode_val)})
         value = data.get("value")
-        if value:
+        if value is not None:
             params.update({"value": value})
 
         if self.action(ExtaLifeAPI.ACTN_TURN_OFF, **params):
@@ -212,10 +212,10 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
     @property
     def effect(self):
         mode = self.channel_data.get("mode")
-        if not mode or mode != 2:
+        if mode is None or mode != 2:
             return None
         mode_val = self.channel_data.get("mode_val")
-        if not mode_val:
+        if mode_val is None:
             return None
         return MAP_MODE_VAL_EFFECT[modevaltoint(mode_val)]
 
