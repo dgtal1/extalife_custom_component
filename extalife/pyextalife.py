@@ -62,6 +62,7 @@ class ExtaLifeAPI:
     CMD_FETCH_RECEIVERS = 37
     CMD_FETCH_SENSORS = 38
     CMD_VERSION = 151
+    CMD_RESTART = 150
 
     # Actions
     ACTN_TURN_ON = "TURN_ON"
@@ -241,6 +242,21 @@ class ExtaLifeAPI:
 
         try:
             cmd = self.CMD_CONTROL_DEVICE
+            resp = self.tcp.exec_command(cmd, cmd_data, 0.2)
+
+            log.debug("JSON response for command %s: %s", cmd, resp)
+
+            return resp
+        except TCPCmdError:
+            log.error("Command %s could not be executed", cmd)
+            return None
+
+    def restart(self):
+        """ Restart EFC-01 """
+        try:
+            cmd = self.CMD_RESTART
+            cmd_data = dict()
+
             resp = self.tcp.exec_command(cmd, cmd_data, 0.2)
 
             log.debug("JSON response for command %s: %s", cmd, resp)

@@ -1,6 +1,7 @@
 """Support for ExtaLife devices."""
 import logging
 from typing import Optional
+from datetime import timedelta
 
 import voluptuous as vol
 
@@ -10,47 +11,69 @@ from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.dispatcher import (async_dispatcher_send, async_dispatcher_connect)
+from homeassistant.helpers.typing import HomeAssistantType
 
 from .pyextalife import ExtaLifeAPI
-from datetime import timedelta
+from .pyextalife import TCPConnError
+from .pyextalife import (DEVICE_ARR_ALL_SWITCH, DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_ALL_COVER,
+                            DEVICE_ARR_ALL_SENSOR, DEVICE_ARR_ALL_CLIMATE, DEVICE_ARR_ALL_SENSOR_MEAS, DEVICE_ARR_ALL_SENSOR_BINARY, DEVICE_ARR_ALL_SENSOR_MULTI,
+                            DEVICE_ICON_ARR_LIGHT, DEVICE_ARR_ALL_IGNORE)
+from .const import (DOMAIN, DATA_CONTROLLER, DATA_STATUS_POLLER)
+from .services import ExtaLifeServices
 
 _LOGGER = logging.getLogger(__name__)
-DOMAIN = "extalife"
 
-DATA_CONTROLLER = 'controller'
-DATA_STATUS_POLLER = 'update_data'
-
+# config
 CONF_CONTROLLER_IP = 'controller_ip'
 CONF_USER = 'user'
 CONF_PASSWORD = 'password'
 CONF_POLL_INTERVAL = 'poll_interval'        # in minutes
+CONF_PLATFORM_CFG = 'platform_config'       # additional per-platform configuration
+CONF_PLATFORM_CFG_SWITCH = 'switch'         # additional switch configuration
+CONF_PLATFORM_CFG_LIGHT = 'light'           # additional light configuration
+CONF_PLATFORM_CFG_LIGHT_ICONS = 'light_icons'           # map switches as lights for these Exta Life icons
+CONF_PLATFORM_CFG_COVER = 'cover'           # additional cover configuration
+CONF_PLATFORM_CFG_COVER_INV_STATUS = 'inverted_status'           # cover works as in Exta Life app: open = 0, closed = 100. Causes problems in HA GUI with UP/DOWN buttons
 DEFAULT_POLL_INTERVAL = 5
 
+# signals
 SIGNAL_DATA_UPDATED = f"{DOMAIN}_data_updated"
 SIGNAL_NOTIF_STATE_UPDATED = f"{DOMAIN}_notif_state_updated"
 
+# schema validations
+PLATFORM_CONF_SCHEMA = vol.Schema(
+    {
+            CONF_PLATFORM_CFG_LIGHT: {
+                vol.Optional(CONF_PLATFORM_CFG_LIGHT_ICONS, default=DEVICE_ICON_ARR_LIGHT): cv.ensure_list,
+            },
+            CONF_PLATFORM_CFG_COVER: {
+                vol.Optional(CONF_PLATFORM_CFG_COVER_INV_STATUS, default=False): cv.boolean,
+            },
+    }
+)
 
-
-CONFIG_SCHEMA = vol.Schema(
+# config schema for HA validations
+CONFIG_SCHEMA=vol.Schema(
     {
         DOMAIN: vol.Schema(
             {
                 vol.Optional(CONF_CONTROLLER_IP,  default=''): cv.string,
                 vol.Required(CONF_USER): cv.string,
                 vol.Required(CONF_PASSWORD): cv.string,
-                vol.Optional(CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL): cv.positive_int
+                vol.Optional(CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL): cv.positive_int,
+                # vol.Optional(CONF_PLATFORM_CFG): PLATFORM_CONF_SCHEMA,
             }
         )
     },
     extra=vol.ALLOW_EXTRA,
 )
 
-from .pyextalife import TCPConnError
-
-def setup(hass, base_config):
+def setup(hass: HomeAssistantType, base_config):
     """Set up Exta Life component."""
-
     conf = base_config[DOMAIN]
+    # _LOGGER.info("config dump %s", conf)
+    controller= None
+
     hass.data[DOMAIN] = {}
     data = hass.data[DOMAIN][DATA_STATUS_POLLER] = StatusPoller(hass, conf)
 
@@ -82,7 +105,7 @@ def setup(hass, base_config):
             )
             return False
     except TCPConnError:
-        host = controller.host if controller.host else 'unknown'
+        host = controller.host if (controller and controller.host) else 'unknown'
         _LOGGER.error(
             "Could not connect to EFC-01 on IP: %s", host
         )
@@ -101,17 +124,19 @@ def setup(hass, base_config):
     # register callback for periodic controller ping to keep connection alive
     async_track_time_interval(hass, data.do_ping, timedelta(seconds=10))
 
+    # publish services to HA service registry
+    services = ExtaLifeServices(hass)
+    services.register_services()
+
     _LOGGER.info("Exta Life integration setup successfully!")
     return True
 
 
-def discover_devices(hass, hass_config):
+def discover_devices(hass: HomeAssistantType, hass_config):
     """
     Discover devices and register them in Home Assistant.
     """
-    from .pyextalife import (DEVICE_ARR_ALL_SWITCH, DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_ALL_COVER,
-                             DEVICE_ARR_ALL_SENSOR, DEVICE_ARR_ALL_CLIMATE, DEVICE_ARR_ALL_SENSOR_MEAS, DEVICE_ARR_ALL_SENSOR_BINARY, DEVICE_ARR_ALL_SENSOR_MULTI,
-                             DEVICE_ICON_ARR_LIGHT, DEVICE_ARR_ALL_IGNORE)
+
     component_configs = {}
 
     # get data from the StatusPoller object stored in HA object data
@@ -182,7 +207,7 @@ def discover_devices(hass, hass_config):
 class StatusPoller:
     """Get the latest data from EFC-01, call device discovery, handle status notifications."""
 
-    def __init__(self, hass, conf):
+    def __init__(self, hass: HomeAssistantType, conf):
         """Initialize the data object."""
         self.data = None
         self._hass = hass
@@ -356,8 +381,8 @@ class ExtaLifeChannel(Entity):
 
         ExtaLifeChannel._cmd_in_execution = True
 
-        _LOGGER.debug("Executing action %s on channel %s, params: %s", action, self.channel_id, add_pars)
         resp = self.controller.execute_action(action, self.channel_id, **add_pars)
+        _LOGGER.debug("Executing action %s on channel %s, params: %s", action, self.channel_id, add_pars)
 
         ExtaLifeChannel._cmd_in_execution = False
         return resp
@@ -368,7 +393,6 @@ class ExtaLifeChannel(Entity):
 
     def update(self):
         """Call to update state."""
-
         # data poller object contains PyExtaLife API channel data dict value pair: {("id"): ("data")}
         channel_indx = self.data_poller.channels_indx
 
