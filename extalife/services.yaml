@@ -1,2 +1,2 @@
 restart:
-    description: Restart controller by sending API command 150. No data payload needed.
+    description: Restart controller by sending API command 150.
