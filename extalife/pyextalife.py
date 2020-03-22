@@ -368,6 +368,8 @@ class TCPAdapter:
             # log.debug("TCP data received for command %s: %s", command, data)
             if data[-1] == chr(3):
                 data = data[:-1]
+	    else:
+		return
         return self.parse_tcp_response(data, command)
 
     def ping(self):
