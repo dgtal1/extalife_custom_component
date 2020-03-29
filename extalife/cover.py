@@ -26,11 +26,16 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     _LOGGER.debug("Discovery: %s", pformat(discovery_info))
 
-    add_entities([ExtaLifeSwitch(device) for device in discovery_info])
+    add_entities([ExtaLifeCover(device) for device in discovery_info])
 
 
-class ExtaLifeSwitch(ExtaLifeChannel, CoverDevice):
-    """Representation of an ExtaLife Switch."""
+class ExtaLifeCover(ExtaLifeChannel, CoverDevice):
+    """Representation of an ExtaLife Cover."""
+
+    @property
+    def is_inverted_control(self):
+        from . import (DOMAIN, CONF_OPTIONS, CONF_OPTIONS_COVER, CONF_OPTIONS_COVER_INV_CONTROL)
+        return self.hass.data[DOMAIN][CONF_OPTIONS][CONF_OPTIONS_COVER][CONF_OPTIONS_COVER_INV_CONTROL]
 
     @property
     def device_class(self):
@@ -40,18 +45,21 @@ class ExtaLifeSwitch(ExtaLifeChannel, CoverDevice):
     def supported_features(self):
         features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION | SUPPORT_STOP
         return features
-
+    
     @property
     def current_cover_position(self):
         """Return current position of cover. 0 is closed, 100 is open."""
         # need to invert value for Exta Life as HA "thinks" in % of a shutter being open :(
         # return 100 - self.channel_data.get("data").get("value")
-        return self.channel_data.get("value")
+        val = self.channel_data.get("value")
+        pos = val if self.is_inverted_control else 100-val
+        return pos        
 
     def set_cover_position(self, **kwargs):
         """Move the cover to a specific position."""
         data = self.channel_data
-        value = int(kwargs.get(ATTR_POSITION))
+        pos = int(kwargs.get(ATTR_POSITION))
+        value = pos if self.is_inverted_control else 100-pos
 
         if self.action(ExtaLifeAPI.ACTN_SET_POS, value=value):
             data["value"] = value
@@ -65,21 +73,22 @@ class ExtaLifeSwitch(ExtaLifeChannel, CoverDevice):
 
         if position is None:
             return None
-        return position == 100
+        pos = 1 if self.is_inverted_control else 100
+        return position == pos
 
     def open_cover(self, **kwargs):
         """Open the cover."""
         data = self.channel_data
 
         if self.action(ExtaLifeAPI.ACTN_OPEN):
-            data["value"] = 0
+            data["value"] = 0 if self.is_inverted_control else 100
             self.schedule_update_ha_state()
 
     def close_cover(self, **kwargs):
         """Close the cover."""
         data = self.channel_data
         if self.action(ExtaLifeAPI.ACTN_CLOSE):
-            data["value"] = 100
+            data["value"] = 100 if self.is_inverted_control else 0
             self.schedule_update_ha_state()
 
     def stop_cover(self, **kwargs):
