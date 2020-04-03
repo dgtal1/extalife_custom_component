@@ -42,7 +42,7 @@ OPT_DEF_LIGHT = {
 }
 
 OPT_DEF_COVER = {
-    CONF_OPTIONS_COVER_INV_CONTROL: True,
+    CONF_OPTIONS_COVER_INV_CONTROL: False,
 }
 OPT_DEF_ALL = {
     CONF_OPTIONS_LIGHT: OPT_DEF_LIGHT,
@@ -58,7 +58,7 @@ OPTIONS_CONF_SCHEMA = {
                 vol.Optional(CONF_OPTIONS_LIGHT_ICONS_LIST, default=DEVICE_ICON_ARR_LIGHT): cv.ensure_list,
             },
             vol.Optional(CONF_OPTIONS_COVER, default=OPT_DEF_COVER): {
-                vol.Optional(CONF_OPTIONS_COVER_INV_CONTROL, default=False): cv.boolean,
+                vol.Optional(CONF_OPTIONS_COVER_INV_CONTROL, default=OPT_DEF_COVER[CONF_OPTIONS_COVER_INV_CONTROL]): cv.boolean,
             },
     }
 
@@ -80,12 +80,14 @@ CONFIG_SCHEMA=vol.Schema(
 
 def setup(hass: HomeAssistantType, base_config):
     """Set up Exta Life component."""
+    from pprint import pformat
     conf = base_config[DOMAIN]
     # _LOGGER.info("config dump %s", conf)
     controller= None
 
     hass.data[DOMAIN] = {}
     options = conf.get(CONF_OPTIONS)
+    _LOGGER.debug("options: %s", pformat(conf))
     hass.data[DOMAIN][CONF_OPTIONS] = options
     data = hass.data[DOMAIN][DATA_STATUS_POLLER] = StatusPoller(hass, conf)
 
@@ -128,7 +130,7 @@ def setup(hass: HomeAssistantType, base_config):
     data.update()
 
     # start notification listener for immediate entity status updates from controller
-    data.start_listener()
+    #data.start_listener()
 
     # register callback for periodic status update polling + device discovery
     async_track_time_interval(hass, data.update, timedelta(minutes=conf[CONF_POLL_INTERVAL]))
@@ -382,6 +384,8 @@ class ExtaLifeChannel(Entity):
 
         Actions are currently hardcoded in platforms
         """
+        return True
+        
         import time
 
         # wait for the previous TCP commands to finish before executing action
