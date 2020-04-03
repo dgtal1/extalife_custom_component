@@ -384,7 +384,6 @@ class ExtaLifeChannel(Entity):
 
         Actions are currently hardcoded in platforms
         """
-        return True
         
         import time
 
