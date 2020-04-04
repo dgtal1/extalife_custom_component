@@ -28,29 +28,39 @@ CONF_CONTROLLER_IP = 'controller_ip'
 CONF_USER = 'user'
 CONF_PASSWORD = 'password'
 CONF_POLL_INTERVAL = 'poll_interval'        # in minutes
-CONF_PLATFORM_CFG = 'platform_config'       # additional per-platform configuration
-CONF_PLATFORM_CFG_SWITCH = 'switch'         # additional switch configuration
-CONF_PLATFORM_CFG_LIGHT = 'light'           # additional light configuration
-CONF_PLATFORM_CFG_LIGHT_ICONS = 'light_icons'           # map switches as lights for these Exta Life icons
-CONF_PLATFORM_CFG_COVER = 'cover'           # additional cover configuration
-CONF_PLATFORM_CFG_COVER_INV_STATUS = 'inverted_status'           # cover works as in Exta Life app: open = 0, closed = 100. Causes problems in HA GUI with UP/DOWN buttons
+CONF_OPTIONS = 'options'       # additional per-platform configuration
+CONF_OPTIONS_SWITCH = 'switch'         # additional switch configuration
+CONF_OPTIONS_LIGHT = 'light'           # additional light configuration
+CONF_OPTIONS_LIGHT_ICONS_LIST = 'icons_list'           # map switches as lights for these Exta Life icons
+CONF_OPTIONS_COVER = 'cover'           # additional cover configuration
+CONF_OPTIONS_COVER_INV_CONTROL = 'inverted_control'           # cover works as in Exta Life app: open = 0, closed = 100. Causes problems in HA GUI with UP/DOWN buttons
 DEFAULT_POLL_INTERVAL = 5
 
+# config options defaults
+OPT_DEF_LIGHT = {
+    CONF_OPTIONS_LIGHT_ICONS_LIST: DEVICE_ICON_ARR_LIGHT,
+}
+
+OPT_DEF_COVER = {
+    CONF_OPTIONS_COVER_INV_CONTROL: False,
+}
+OPT_DEF_ALL = {
+    CONF_OPTIONS_LIGHT: OPT_DEF_LIGHT,
+    CONF_OPTIONS_COVER: OPT_DEF_COVER
+}
 # signals
 SIGNAL_DATA_UPDATED = f"{DOMAIN}_data_updated"
 SIGNAL_NOTIF_STATE_UPDATED = f"{DOMAIN}_notif_state_updated"
 
 # schema validations
-PLATFORM_CONF_SCHEMA = vol.Schema(
-    {
-            CONF_PLATFORM_CFG_LIGHT: {
-                vol.Optional(CONF_PLATFORM_CFG_LIGHT_ICONS, default=DEVICE_ICON_ARR_LIGHT): cv.ensure_list,
+OPTIONS_CONF_SCHEMA = {
+            vol.Optional(CONF_OPTIONS_LIGHT, default=OPT_DEF_LIGHT): {
+                vol.Optional(CONF_OPTIONS_LIGHT_ICONS_LIST, default=DEVICE_ICON_ARR_LIGHT): cv.ensure_list,
             },
-            CONF_PLATFORM_CFG_COVER: {
-                vol.Optional(CONF_PLATFORM_CFG_COVER_INV_STATUS, default=False): cv.boolean,
+            vol.Optional(CONF_OPTIONS_COVER, default=OPT_DEF_COVER): {
+                vol.Optional(CONF_OPTIONS_COVER_INV_CONTROL, default=OPT_DEF_COVER[CONF_OPTIONS_COVER_INV_CONTROL]): cv.boolean,
             },
     }
-)
 
 # config schema for HA validations
 CONFIG_SCHEMA=vol.Schema(
@@ -61,7 +71,7 @@ CONFIG_SCHEMA=vol.Schema(
                 vol.Required(CONF_USER): cv.string,
                 vol.Required(CONF_PASSWORD): cv.string,
                 vol.Optional(CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL): cv.positive_int,
-                # vol.Optional(CONF_PLATFORM_CFG): PLATFORM_CONF_SCHEMA,
+                vol.Optional(CONF_OPTIONS, default=OPT_DEF_ALL): OPTIONS_CONF_SCHEMA,
             }
         )
     },
@@ -70,11 +80,15 @@ CONFIG_SCHEMA=vol.Schema(
 
 def setup(hass: HomeAssistantType, base_config):
     """Set up Exta Life component."""
+    from pprint import pformat
     conf = base_config[DOMAIN]
     # _LOGGER.info("config dump %s", conf)
     controller= None
 
     hass.data[DOMAIN] = {}
+    options = conf.get(CONF_OPTIONS)
+    _LOGGER.debug("options: %s", pformat(conf))
+    hass.data[DOMAIN][CONF_OPTIONS] = options
     data = hass.data[DOMAIN][DATA_STATUS_POLLER] = StatusPoller(hass, conf)
 
     controller_ip = conf[CONF_CONTROLLER_IP] if conf[CONF_CONTROLLER_IP] != '' else None
@@ -116,7 +130,7 @@ def setup(hass: HomeAssistantType, base_config):
     data.update()
 
     # start notification listener for immediate entity status updates from controller
-    data.start_listener()
+    #data.start_listener()
 
     # register callback for periodic status update polling + device discovery
     async_track_time_interval(hass, data.update, timedelta(minutes=conf[CONF_POLL_INTERVAL]))
@@ -138,6 +152,8 @@ def discover_devices(hass: HomeAssistantType, hass_config):
     """
 
     component_configs = {}
+    options = hass.data[DOMAIN][CONF_OPTIONS]
+    light_icons = options.get(CONF_OPTIONS_LIGHT).get(CONF_OPTIONS_LIGHT_ICONS_LIST)
 
     # get data from the StatusPoller object stored in HA object data
     channels = hass.data[DOMAIN][DATA_STATUS_POLLER].channels  # -> list
@@ -159,7 +175,7 @@ def discover_devices(hass: HomeAssistantType, hass_config):
 
         if chn_type in DEVICE_ARR_ALL_SWITCH:
             icon = channel["data"]["icon"]
-            if icon in DEVICE_ICON_ARR_LIGHT:
+            if icon in light_icons:
                 component_name = 'light'
             else:
                 component_name = 'switch'
@@ -367,7 +383,7 @@ class ExtaLifeChannel(Entity):
         Run controller command/action.
 
         Actions are currently hardcoded in platforms
-        """
+        """ 
         import time
 
         # wait for the previous TCP commands to finish before executing action
