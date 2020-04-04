@@ -383,8 +383,7 @@ class ExtaLifeChannel(Entity):
         Run controller command/action.
 
         Actions are currently hardcoded in platforms
-        """
-        
+        """ 
         import time
 
         # wait for the previous TCP commands to finish before executing action
