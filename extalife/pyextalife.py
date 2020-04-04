@@ -1,4 +1,4 @@
-""" ExtaLife JSN API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
+""" ExtaLife JSON API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
 from __future__ import print_function
 
 import logging
@@ -50,6 +50,7 @@ DEVICE_ARR_ALL_SENSOR = [
 DEVICE_ICON_ARR_LIGHT = [
     15,
     13,
+    8,9,14,16,17,
 ]  # override device and type rules based on icon; force 'light' MQTT device for some icons, but only when device was detected preliminarly as switch; 28 =LED
 
 
