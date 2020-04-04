@@ -338,7 +338,13 @@ class TCPAdapter:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # Bind to the server address
-        sock.bind(server_address)
+        try:
+            sock.bind(server_address)
+        except (socket.error, OSError) as e:
+            sock.close()
+            sock = None
+            log.error("Could not connect to receive UDP multicast from EFC-01 on port %s", MCAST_PORT)
+            return False
         # Tell the operating system to add the socket to the multicast group
         # on all interfaces (join multicast group)
         group = socket.inet_aton(MCAST_GRP)
@@ -396,7 +402,7 @@ class TCPAdapter:
         """
         from datetime import datetime
 
-        SOCK_TIMEOUT = 5  # let it run maximum for 5 seconds
+        SOCK_TIMEOUT = 15  # let it run maximum for 15 seconds
 
         request = {"command": command, "data": data}
         cmd = self._json_to_tcp(request)
