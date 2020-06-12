@@ -1,9 +1,0 @@
-{
-  "domain": "extalife",
-  "name": "Exta Life",
-  "config_flow": false,
-  "documentation": "https://www.forumextalife.pl/index.php/board,56.0.html",
-  "requirements": [],
-  "dependencies": [],
-  "codeowners": ["@dgtal1"]
-}
