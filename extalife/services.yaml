@@ -1,2 +1,0 @@
-restart:
-    description: Restart controller by sending API command 150.
