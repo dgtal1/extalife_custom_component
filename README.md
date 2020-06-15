@@ -12,7 +12,16 @@ ZAMEL Exta Life integration with Home Assistant based on custom component.
 * Heating controller: RGT-01, GKN-01
 * Sensors: RCT-21, RCT-22, RNK-21&RNK-22 built-in temperature sensor, flood sensor RCZ-21, motion sensor RCR-21, window sensor RCK-21, multisensor RCM-21
 
-**Note:**: Certain switches are mapped into Home Asistant light entities depending on icon assigned to them. This is to support voice control by Google Assistant and others and because switches are mostly used for light control.
+**Note:** Certain switches are mapped into Home Asistant light entities depending on icon assigned to them. This is to support voice control by Google Assistant and others and because switches are mostly used for light control.
+
+### ExtaFree supported devices:
+* Switches: ROP-01, ROP-02, ROP-05, ROP-06, ROP-07, ROM-01, ROM-10
+* Dimmers: RDP-01, RDP-02, RDP-11
+* Smart sockets: RWG-01
+* Roller blind controllers: SRP-02, SRP-03, ROB-01
+
+**Note:** All ExtaFree devices by default shows two buttons - one to turn off device and one to turn on device. In bipolar/mono/time mode you need to use only turn on button.
+
 ### Configuration
 Edit your configuration.yaml file and add the following lines:
 

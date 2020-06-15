@@ -116,6 +116,7 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
 
         self._supported_flags = 0
         self._effect_list = None
+        self._assumed_state = False
         self.channel_data = channel_data.get("data")
 
         dev_type = self.channel_data.get("type")
@@ -132,6 +133,8 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             self._supported_flags |= SUPPORT_EFFECT
             if dev_type in [27, 38]:
                 self._effect_list = EFFECT_LIST_SLR
+        if dev_type in [80]: #isExtaFree device
+            self._assumed_state = True
 
     def turn_on(self, **kwargs):
         """Turn on the switch."""
@@ -181,14 +184,19 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
             params.update({"mode": 2}) # mode - turn on effect
             params.update({"mode_val": MAP_EFFECT_MODE_VAL[effect]})  # mode - one of effects
 
-        if self.action(ExtaLifeAPI.ACTN_TURN_ON, **params):
-            # update channel data with new values
-            data["power"] = 1
-            mode_val_new = params.get("mode_val")
-            if mode_val_new is not None:
-                params["mode_val"] = modeval_upd(mode_val, mode_val_new)  # convert new value to the format of the old value from channel_data
-            data.update(params)
-            self.schedule_update_ha_state()
+        dev_type = self.channel_data.get("type")
+        if dev_type in [80]: #isExtaFree device
+           if self.action(ExtaLifeAPI.ACTN_EXFREE_TURN_ON_PRESS, **params) and self.action(ExtaLifeAPI.ACTN_EXFREE_TURN_ON_RELEASE, **params):
+                self.schedule_update_ha_state() 
+        else:
+            if self.action(ExtaLifeAPI.ACTN_TURN_ON, **params):
+                # update channel data with new values
+                data["power"] = 1
+                mode_val_new = params.get("mode_val")
+                if mode_val_new is not None:
+                    params["mode_val"] = modeval_upd(mode_val, mode_val_new)  # convert new value to the format of the old value from channel_data
+                data.update(params)
+                self.schedule_update_ha_state()
 
     def turn_off(self, **kwargs):
         """Turn off the switch."""
@@ -204,10 +212,15 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
         if value is not None:
             params.update({"value": value})
 
-        if self.action(ExtaLifeAPI.ACTN_TURN_OFF, **params):
-            data["power"] = 0
-            data["mode"] = mode
-            self.schedule_update_ha_state()
+        dev_type = self.channel_data.get("type")
+        if dev_type in [80]: #isExtaFree device
+            if self.action(ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_PRESS, **params) and self.action(ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_RELEASE, **params):
+                self.schedule_update_ha_state()
+        else: 
+            if self.action(ExtaLifeAPI.ACTN_TURN_OFF, **params):
+                data["power"] = 0
+                data["mode"] = mode
+                self.schedule_update_ha_state()
 
     @property
     def effect(self):
@@ -222,6 +235,10 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
     @property
     def effect_list(self):
         return self._effect_list
+
+    @property
+    def assumed_state(self):
+        return self._assumed_state
 
     @property
     def brightness(self):
@@ -256,6 +273,10 @@ class ExtaLifeLight(ExtaLifeChannel, Light):
     @property
     def is_on(self):
         """Return true if switch is on."""
+        dev_type = self.channel_data.get("type")
+        if dev_type in [80]: #isExtaFree device
+            return None
+        
         state = self.channel_data.get("power")
 
         if state == 1:

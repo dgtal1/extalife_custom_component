@@ -15,7 +15,7 @@ DEVICE_ARR_SENS_HUMID = []
 DEVICE_ARR_SENS_MULTI = [28]
 DEVICE_ARR_SENS_WATER = [42]
 DEVICE_ARR_SENS_MOTION = [41]
-DEVICE_ARR_SWITCH = [10, 11, 22, 23, 24]
+DEVICE_ARR_SWITCH = [10, 11, 22, 23, 24, 80]
 DEVICE_ARR_COVER = [12, 25]
 DEVICE_ARR_LIGHT = [13, 26, 45, 27, 46]
 DEVICE_ARR_LIGHT_RGB = []     #RGB only
@@ -61,6 +61,7 @@ class ExtaLifeAPI:
     CMD_LOGIN = 1
     CMD_CONTROL_DEVICE = 20
     CMD_FETCH_RECEIVERS = 37
+    CMD_FETCH_EXTAFREE = 203
     CMD_FETCH_SENSORS = 38
     CMD_VERSION = 151
     CMD_RESTART = 150
@@ -78,6 +79,10 @@ class ExtaLifeAPI:
     ACTN_SET_SLR_MODE = "SET_MODE"
     ACTN_SET_RGT_MODE_MANUAL = "RGT_SET_MODE_MANUAL"
     ACTN_SET_RGT_MODE_AUTO = "RGT_SET_MODE_AUTO"
+    ACTN_EXFREE_TURN_ON_PRESS = "TURN_ON_PRESS"
+    ACTN_EXFREE_TURN_ON_RELEASE = "TURN_ON_RELEASE"
+    ACTN_EXFREE_TURN_OFF_PRESS = "TURN_OFF_PRESS"
+    ACTN_EXFREE_TURN_OFF_RELEASE = "TURN_OFF_RELEASE"
 
     def __init__(self, user, password, **kwargs):
         self.host = kwargs.get("host")
@@ -136,8 +141,13 @@ class ExtaLifeAPI:
             resp = self.tcp.exec_command(cmd, None, 1)
             sensor_channels = self._get_channels_int(resp)
 
+            cmd = self.CMD_FETCH_EXTAFREE
+            resp = self.tcp.exec_command(cmd, None, 1)
+            extafree_channels = self._get_channels_int(resp)
+
             channels = receiver_channels
             channels.extend(sensor_channels)
+            channels.extend(extafree_channels)
 
             return channels
 
@@ -228,6 +238,10 @@ class ExtaLifeAPI:
             ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO: 0,
             ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL: 1,
             ExtaLifeAPI.ACTN_SET_TMP: 1,
+            ExtaLifeAPI.ACTN_EXFREE_TURN_ON_PRESS: 1,
+            ExtaLifeAPI.ACTN_EXFREE_TURN_ON_RELEASE: 2,
+            ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_PRESS: 3,
+            ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_RELEASE: 4,
         }
         ch_id, channel = channel_id.split("-")
         ch_id = int(ch_id)
