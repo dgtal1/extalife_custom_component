@@ -92,7 +92,7 @@ class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
     @property
     def device_state_attributes(self):
         """Return device specific state attributes."""
-        data = self._channel_data.get("data")
+        data = self.channel_data.get("data")
         # general sensor attributes
         if data.get("sync_time") is not None:
             self._attributes.update({"sync_time": data.get("sync_time")})
@@ -112,15 +112,14 @@ class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
         """ React on state notification from controller """
         state = data.get("state")
         ch_data = self.channel_data.copy()
-        value = None
 
-        ch_data["value_3"] = value
+        ch_data["value_3"] = state
 
         _LOGGER.debug(
             "on_state_notification for entity: %s, id: %s. Status to be updated: %s",
             self.entity_id,
             self.channel_id,
-            value,
+            state,
         )
 
         # update only if notification data contains new status; prevent HS event bus overloading
