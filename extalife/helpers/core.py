@@ -218,12 +218,14 @@ class Core():
         package = '.'.join(__package__.split('.')[:-1])        # 1 level above current package
         module = importlib.import_module('.' + module, package=package)
         func = getattr(module, 'async_setup_entry')
+        _LOGGER.debug("async_setup_custom_platforms(), func: %s", func)
         await func(self.hass, self.config_entry)
 
     async def async_unload_custom_platforms(self):
         """ Unload other, custom (pseudo)platforms """
+        package = '.'.join(__package__.split('.')[:-1])        # 1 level above current package
         for platform, channels in self._platforms_cust.items():
-            module = importlib.import_module('.' + platform, "homeassistant.components.extalife")
+            module = importlib.import_module('.' + platform, package=package)
             func = getattr(module, 'async_unload_entry')
             await func(self._hass, self.config_entry)
 
