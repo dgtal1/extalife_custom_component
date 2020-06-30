@@ -4,54 +4,70 @@ from datetime import timedelta
 import importlib
 import logging
 from typing import Optional
+
 import voluptuous as vol
 
-from homeassistant.const import CONF_ACCESS_TOKEN
-import homeassistant.helpers.config_validation as cv
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers import entity_component
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.typing import HomeAssistantType, ConfigType
-from homeassistant.components.switch import DOMAIN as DOMAIN_SWITCH
-from homeassistant.components.light import DOMAIN as DOMAIN_LIGHT
 from homeassistant.components.binary_sensor import DOMAIN as DOMAIN_BINARY_SENSOR
 from homeassistant.components.climate import DOMAIN as DOMAIN_CLIMATE
 from homeassistant.components.cover import DOMAIN as DOMAIN_COVER
+from homeassistant.components.light import DOMAIN as DOMAIN_LIGHT
 from homeassistant.components.sensor import DOMAIN as DOMAIN_SENSOR
+from homeassistant.components.switch import DOMAIN as DOMAIN_SWITCH
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.const import CONF_ACCESS_TOKEN
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import (
+    device_registry as dr,
+    entity_component,
+    entity_platform,
+)
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.discovery import load_platform
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 
-from .pyextalife import ExtaLifeAPI
-from .pyextalife import TCPConnError
+from .config_flow import get_default_options
+from .helpers.const import (
+    CONF_CONTROLLER_IP,
+    CONF_OPTIONS,
+    CONF_PASSWORD,
+    CONF_POLL_INTERVAL,
+    CONF_USER,
+    DATA_CORE,
+    DEFAULT_POLL_INTERVAL,
+    DOMAIN,
+    DOMAIN_TRANSMITTER,
+    OPTIONS_COVER,
+    OPTIONS_COVER_INV_CONTROL,
+    OPTIONS_COVER_INVERTED_CONTROL,
+    OPTIONS_LIGHT,
+    OPTIONS_LIGHT_ICONS_LIST,
+    OPTIONS_SWITCH,
+    SIGNAL_DATA_UPDATED,
+    SIGNAL_NOTIF_STATE_UPDATED,
+)
+from .helpers.core import Core
+from .helpers.services import ExtaLifeServices
 from .pyextalife import (
-    DEVICE_ARR_ALL_SWITCH,
-    DEVICE_ARR_ALL_LIGHT,
-    DEVICE_ARR_ALL_COVER,
-    DEVICE_ARR_ALL_SENSOR,
     DEVICE_ARR_ALL_CLIMATE,
-    DEVICE_ARR_ALL_SENSOR_MEAS,
+    DEVICE_ARR_ALL_COVER,
+    DEVICE_ARR_ALL_IGNORE,
+    DEVICE_ARR_ALL_LIGHT,
+    DEVICE_ARR_ALL_SENSOR,
     DEVICE_ARR_ALL_SENSOR_BINARY,
+    DEVICE_ARR_ALL_SENSOR_MEAS,
     DEVICE_ARR_ALL_SENSOR_MULTI,
+    DEVICE_ARR_ALL_SWITCH,
     DEVICE_ARR_ALL_TRANSMITTER,
     DEVICE_ICON_ARR_LIGHT,
-    DEVICE_ARR_ALL_IGNORE,
     DEVICE_MAP_TYPE_TO_MODEL,
+    PRODUCT_CONTROLLER_MODEL,
     PRODUCT_MANUFACTURER,
     PRODUCT_SERIES,
-    PRODUCT_CONTROLLER_MODEL,
+    ExtaLifeAPI,
+    TCPConnError,
 )
-from .helpers.const import (DOMAIN,
-                    CONF_CONTROLLER_IP, CONF_USER, CONF_PASSWORD, CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL,
-                    OPTIONS_COVER_INVERTED_CONTROL, OPTIONS_LIGHT_ICONS_LIST,
-                    SIGNAL_DATA_UPDATED, SIGNAL_NOTIF_STATE_UPDATED, DATA_CORE, DOMAIN_TRANSMITTER,
-                    CONF_OPTIONS, OPTIONS_SWITCH, OPTIONS_LIGHT, OPTIONS_LIGHT_ICONS_LIST, OPTIONS_COVER, OPTIONS_COVER_INV_CONTROL)
-
-from .helpers.services import ExtaLifeServices
-from .config_flow import get_default_options
-from .helpers.core import Core
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,13 +75,19 @@ OPTIONS_DEFAULTS = get_default_options()
 
 # schema validations
 OPTIONS_CONF_SCHEMA = {
-            vol.Optional(OPTIONS_LIGHT, default=OPTIONS_DEFAULTS[OPTIONS_LIGHT]): {
-                vol.Optional(OPTIONS_LIGHT_ICONS_LIST, default=OPTIONS_DEFAULTS[OPTIONS_LIGHT][OPTIONS_LIGHT_ICONS_LIST]): cv.ensure_list,
-            },
-            vol.Optional(OPTIONS_COVER, default=OPTIONS_DEFAULTS[OPTIONS_COVER]): {
-                vol.Optional(OPTIONS_COVER_INV_CONTROL, default=OPTIONS_DEFAULTS[OPTIONS_COVER][OPTIONS_COVER_INVERTED_CONTROL]): cv.boolean,
-            },
-    }
+    vol.Optional(OPTIONS_LIGHT, default=OPTIONS_DEFAULTS[OPTIONS_LIGHT]): {
+        vol.Optional(
+            OPTIONS_LIGHT_ICONS_LIST,
+            default=OPTIONS_DEFAULTS[OPTIONS_LIGHT][OPTIONS_LIGHT_ICONS_LIST],
+        ): cv.ensure_list,
+    },
+    vol.Optional(OPTIONS_COVER, default=OPTIONS_DEFAULTS[OPTIONS_COVER]): {
+        vol.Optional(
+            OPTIONS_COVER_INV_CONTROL,
+            default=OPTIONS_DEFAULTS[OPTIONS_COVER][OPTIONS_COVER_INVERTED_CONTROL],
+        ): cv.boolean,
+    },
+}
 
 # configuration.yaml config schema for HA validations
 CONFIG_SCHEMA = vol.Schema(
@@ -78,12 +100,15 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Optional(
                     CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL
                 ): cv.positive_int,
-                vol.Optional(CONF_OPTIONS, default=get_default_options()): OPTIONS_CONF_SCHEMA,
+                vol.Optional(
+                    CONF_OPTIONS, default=get_default_options()
+                ): OPTIONS_CONF_SCHEMA,
             }
         )
     },
     extra=vol.ALLOW_EXTRA,
 )
+
 
 async def async_setup(hass: HomeAssistantType, hass_config: ConfigType):
     """Set up Exta Life component from configuration.yaml. This will basically
@@ -93,11 +118,15 @@ async def async_setup(hass: HomeAssistantType, hass_config: ConfigType):
 
     if not hass.config_entries.async_entries(DOMAIN) and DOMAIN in hass_config:
 
-        hass.data.setdefault(DOMAIN, {CONF_OPTIONS: hass_config[DOMAIN].get(CONF_OPTIONS, None)})
+        hass.data.setdefault(
+            DOMAIN, {CONF_OPTIONS: hass_config[DOMAIN].get(CONF_OPTIONS, None)}
+        )
         _LOGGER.debug("async_setup, hass.data.domain: %s", hass.data.get(DOMAIN))
 
         result = hass.async_create_task(
-            hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_IMPORT}, data=hass_config[DOMAIN])
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": SOURCE_IMPORT}, data=hass_config[DOMAIN]
+            )
         )
 
     return True
@@ -137,9 +166,8 @@ async def initialize(hass: HomeAssistantType, config_entry: ConfigEntry):
             _LOGGER.debug("init_options, yaml_options %s", yaml_options)
             options = get_default_options() if yaml_options is None else yaml_options
 
-            hass.config_entries.async_update_entry(
-                config_entry, options=options
-            )
+            hass.config_entries.async_update_entry(config_entry, options=options)
+
     def api_connect(user, password, host):
         controller = Core.get(config_entry.entry_id).api
         controller.connect(user, password, host=host)
@@ -165,13 +193,19 @@ async def initialize(hass: HomeAssistantType, config_entry: ConfigEntry):
 
         # get instance: this will already try to connect and logon
         try:
-            controller = await hass.async_add_executor_job(api_connect, el_conf[CONF_USER], el_conf[CONF_PASSWORD], controller_ip)
+            controller = await hass.async_add_executor_job(
+                api_connect, el_conf[CONF_USER], el_conf[CONF_PASSWORD], controller_ip
+            )
         except TCPConnError as e:
-            _LOGGER.debug("Connection exception: %s, class: %s", e.previous, e.previous.__class__)
+            _LOGGER.debug(
+                "Connection exception: %s, class: %s", e.previous, e.previous.__class__
+            )
             # invalid IP / IP changed? - try autodetection
             if isinstance(e.previous, OSError) and e.previous.errno == 113:
                 _LOGGER.debug("Trying autodiscovery....")
-                controller = await hass.async_add_executor_job(api_connect, el_conf[CONF_USER], el_conf[CONF_PASSWORD], None)
+                controller = await hass.async_add_executor_job(
+                    api_connect, el_conf[CONF_USER], el_conf[CONF_PASSWORD], None
+                )
 
                 # update ConfigEntry with new IP
                 cur_data = {**config_entry.data}
@@ -187,7 +221,10 @@ async def initialize(hass: HomeAssistantType, config_entry: ConfigEntry):
         if sw_version is not None:
             _LOGGER.info("EFC-01 Software version: %s", sw_version)
         else:
-            _LOGGER.error("Error communicating with the EFC-01 controller. Return data %s", sw_version)
+            _LOGGER.error(
+                "Error communicating with the EFC-01 controller. Return data %s",
+                sw_version,
+            )
 
             return False
 
@@ -238,16 +275,16 @@ class ChannelDataManager:
     def controller(self) -> ExtaLifeAPI:
         return Core.get(self._config_entry.entry_id).api
 
-     # callback
+    # callback
     def on_notify(self, msg):
         _LOGGER.debug("Received msg from Notification Listener thread: %s", msg)
         data = msg.get("data")
-        channel = data.get("channel", '#')
+        channel = data.get("channel", "#")
         chan_id = str(data.get("id")) + "-" + str(channel)
 
         # inform HA entity of state change via notification
         signal = ExtaLifeChannel.get_notif_upd_signal(chan_id)
-        if channel != '#':
+        if channel != "#":
             self.core.async_signal_send(signal, data)
         else:
             self.core.async_signal_send_sync(signal, data)
@@ -276,11 +313,15 @@ class ChannelDataManager:
             await self.async_update()
 
         # register callback for periodic status update polling + device discovery
-        self._poller_callback_remove = self.core.async_track_time_interval(self.async_update, timedelta(minutes=self._config_entry.data.get(CONF_POLL_INTERVAL)))
+        self._poller_callback_remove = self.core.async_track_time_interval(
+            self.async_update,
+            timedelta(minutes=self._config_entry.data.get(CONF_POLL_INTERVAL)),
+        )
 
         # register callback for periodic controller ping to keep connection alive
-        self._ping_callback_remove = self.core.async_track_time_interval(self.do_ping, timedelta(seconds=10))
-
+        self._ping_callback_remove = self.core.async_track_time_interval(
+            self.do_ping, timedelta(seconds=10)
+        )
 
     async def async_stop_polling(self):
         """ Turn off periodic callbacks for status update """
@@ -326,13 +367,11 @@ class ChannelDataManager:
             # store only for the 1st call (by setup code, not by HA)
             self.initial_channels = self.channels_indx.copy()
 
-
     async def do_ping(self, now=None):
         """ Perform periodical ping to keep connection alive.
         Additionally perform reconnection if connection lost."""
         tcp = self.controller.get_tcp_adapter()
         await self._hass.async_add_executor_job(tcp.ping)
-
 
     def discover_devices(self):
         """
@@ -363,7 +402,9 @@ class ChannelDataManager:
 
             if chn_type in DEVICE_ARR_ALL_SWITCH:
                 icon = channel["data"]["icon"]
-                if icon in self._config_entry.options.get(DOMAIN_LIGHT).get(OPTIONS_LIGHT_ICONS_LIST):
+                if icon in self._config_entry.options.get(DOMAIN_LIGHT).get(
+                    OPTIONS_LIGHT_ICONS_LIST
+                ):
                     component_name = DOMAIN_LIGHT
                 else:
                     component_name = DOMAIN_SWITCH
@@ -391,7 +432,11 @@ class ChannelDataManager:
                 continue
 
             if component_name is None:
-                _LOGGER.warning("Unsupported device type: %s, channel id: %s", chn_type, channel["id"])
+                _LOGGER.warning(
+                    "Unsupported device type: %s, channel id: %s",
+                    chn_type,
+                    channel["id"],
+                )
                 continue
 
             component_configs.setdefault(component_name, []).append(channel)
@@ -404,7 +449,9 @@ class ChannelDataManager:
             # store array of channels (variable 'channels') for each platform
             self.core.push_channels(component_name, channels)
             self._hass.async_create_task(
-                self._hass.config_entries.async_forward_entry_setup(self._config_entry, component_name)
+                self._hass.config_entries.async_forward_entry_setup(
+                    self._config_entry, component_name
+                )
             )
 
         # setup pseudo-platforms
@@ -445,8 +492,8 @@ class ExtaLifeChannel(Entity):
 
         Core.get(self.config_entry.entry_id).async_signal_register(
             self.get_notif_upd_signal(self.channel_id),
-            self.async_state_notif_update_callback
-            )
+            self.async_state_notif_update_callback,
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         await super().async_will_remove_from_hass()
@@ -510,7 +557,7 @@ class ExtaLifeChannel(Entity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, self.channel_data.get('serial'))},
+            "identifiers": {(DOMAIN, self.channel_data.get("serial"))},
             "name": f"{PRODUCT_MANUFACTURER} {PRODUCT_SERIES} {self.model}",
             "manufacturer": PRODUCT_MANUFACTURER,
             "model": self.model,
@@ -536,10 +583,13 @@ class ExtaLifeChannel(Entity):
             add_pars,
         )
 
-        class Action():
+        class Action:
             @staticmethod
             def execute():
-                return self.controller.execute_action(Action.action, Action.channel_id, **Action.params)
+                return self.controller.execute_action(
+                    Action.action, Action.channel_id, **Action.params
+                )
+
         Action.action = action
         Action.channel_id = self.channel_id
         Action.params = add_pars
@@ -550,7 +600,9 @@ class ExtaLifeChannel(Entity):
 
     @property
     def available(self):
-        return self.data_available == True and self.channel_data.get("is_timeout") == False
+        return (
+            self.data_available == True and self.channel_data.get("is_timeout") == False
+        )
 
     @property
     def device_state_attributes(self):
@@ -565,7 +617,11 @@ class ExtaLifeChannel(Entity):
         # read "data" section/dict by channel id
         data = channel_indx.get(self.channel_id)
 
-        _LOGGER.debug("async_update() for entity: %s, data to be updated: %s", self.entity_id, data)
+        _LOGGER.debug(
+            "async_update() for entity: %s, data to be updated: %s",
+            self.entity_id,
+            data,
+        )
 
         if data is None:
 
@@ -603,15 +659,20 @@ class ExtaLifeController(Entity):
 
         core = Core.get(entry_id)
         from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-        platform = entity_platform.EntityPlatform(hass=core.get_hass(),
+
+        platform = entity_platform.EntityPlatform(
+            hass=core.get_hass(),
             logger=_LOGGER,
             platform_name=DOMAIN,
             domain=DOMAIN,
             platform=None,
             entity_namespace=None,
-            scan_interval=DEFAULT_SCAN_INTERVAL)
+            scan_interval=DEFAULT_SCAN_INTERVAL,
+        )
         platform.config_entry = core.config_entry
-        await platform.async_add_entities([ExtaLifeController(core.config_entry.entry_id)])
+        await platform.async_add_entities(
+            [ExtaLifeController(core.config_entry.entry_id)]
+        )
 
     async def async_added_to_hass(self):
         """ When entity added to HA """
@@ -630,7 +691,7 @@ class ExtaLifeController(Entity):
 
     @property
     def icon(self):
-        return 'mdi:cube-outline'
+        return "mdi:cube-outline"
 
     @property
     def should_poll(self):
@@ -679,11 +740,13 @@ class ExtaLifeController(Entity):
 
     @property
     def device_state_attributes(self):
-        return {"type": "gateway",
-                "mac_address": self.mac,
-                "ipv4_addres:": self.api.host,
-                "software_version": self.api.sw_version,
-                "name": self.api.name}
+        return {
+            "type": "gateway",
+            "mac_address": self.mac,
+            "ipv4_addres:": self.api.host,
+            "software_version": self.api.sw_version,
+            "name": self.api.name,
+        }
 
     async def async_update(self):
         """ Entity update callback """

@@ -1,9 +1,8 @@
 """ ExtaLife JSON API wrapper library. Enables device control, discovery and status fetching from EFC-01 controller """
-from __future__ import print_function
 
+import json
 import logging
 import socket
-import json
 import threading
 
 log = logging.getLogger(__name__)
@@ -93,7 +92,7 @@ DEVICE_MAP_TYPE_TO_MODEL = {
 }
 
 # reverse lookup
-MODEL_MAP_MODEL_TO_TYPE =  {v: k for k, v in DEVICE_MAP_TYPE_TO_MODEL.items()}
+MODEL_MAP_MODEL_TO_TYPE = {v: k for k, v in DEVICE_MAP_TYPE_TO_MODEL.items()}
 
 # device type (channel_data.data.type)
 DEVICE_ARR_SENS_TEMP = [2, 4, 20, 21]
@@ -112,9 +111,9 @@ DEVICE_ARR_LIGHT_RGBW = [27, 38]
 DEVICE_ARR_LIGHT_EFFECT = [27, 38]
 DEVICE_ARR_CLIMATE = [16]
 DEVICE_ARR_REPEATER = [237]
-DEVICE_ARR_TRANS_REMOTE = [5,6,7,8,51,52,53]
-DEVICE_ARR_TRANS_NORMAL_BATTERY = [1,3,19]
-DEVICE_ARR_TRANS_NORMAL_MAINS = [17,18]
+DEVICE_ARR_TRANS_REMOTE = [5, 6, 7, 8, 51, 52, 53]
+DEVICE_ARR_TRANS_NORMAL_BATTERY = [1, 3, 19]
+DEVICE_ARR_TRANS_NORMAL_MAINS = [17, 18]
 
 DEVICE_ARR_ALL_SWITCH = DEVICE_ARR_SWITCH
 DEVICE_ARR_ALL_LIGHT = [
@@ -124,7 +123,11 @@ DEVICE_ARR_ALL_LIGHT = [
 ]
 DEVICE_ARR_ALL_COVER = [*DEVICE_ARR_COVER]
 DEVICE_ARR_ALL_CLIMATE = [*DEVICE_ARR_CLIMATE]
-DEVICE_ARR_ALL_TRANSMITTER = [*DEVICE_ARR_TRANS_REMOTE, *DEVICE_ARR_TRANS_NORMAL_BATTERY, *DEVICE_ARR_TRANS_NORMAL_MAINS]
+DEVICE_ARR_ALL_TRANSMITTER = [
+    *DEVICE_ARR_TRANS_REMOTE,
+    *DEVICE_ARR_TRANS_NORMAL_BATTERY,
+    *DEVICE_ARR_TRANS_NORMAL_MAINS,
+]
 DEVICE_ARR_ALL_IGNORE = [*DEVICE_ARR_REPEATER]
 
 # measurable magnitude/quantity:
@@ -146,7 +149,11 @@ DEVICE_ARR_ALL_SENSOR = [
 DEVICE_ICON_ARR_LIGHT = [
     15,
     13,
-    8,9,14,16,17,
+    8,
+    9,
+    14,
+    16,
+    17,
 ]  # override device and type rules based on icon; force 'light' device for some icons, but only when device was detected preliminarly as switch; 28 =LED
 
 
@@ -217,10 +224,12 @@ class ExtaLifeAPI:
             raise TCPConnError("Could not find controller IP via autodiscovery")
 
         # init TCP adapter and try to connect
-        self.tcp = TCPAdapter(user,
+        self.tcp = TCPAdapter(
+            user,
             password,
             on_connect_callback=self._on_tcp_connect_callback,
-            on_disconnect_callback=self._on_tcp_disconnect_callback)
+            on_disconnect_callback=self._on_tcp_disconnect_callback,
+        )
 
         # connect and login - may raise TCPConnErr
         log.debug("Connecting to controller using IP: %s", self.host)
@@ -278,6 +287,7 @@ class ExtaLifeAPI:
 
     def get_mac(self):
         from getmac import get_mac_address
+
         # get EFC-01 controller MAC address
         return get_mac_address(ip=self.host)
 
@@ -307,7 +317,9 @@ class ExtaLifeAPI:
         """ Get controller name from buffer """
         return self._name
 
-    def get_channels(self, include=(CHN_TYP_RECEIVERS, CHN_TYP_SENSORS, CHN_TYP_TRANSMITTERS)):
+    def get_channels(
+        self, include=(CHN_TYP_RECEIVERS, CHN_TYP_SENSORS, CHN_TYP_TRANSMITTERS)
+    ):
         """
         Get list of dicts of Exta Life channels consisting of native Exta Life TCP JSON
         data, but with transformed data model. Each channel will have native channel info
@@ -336,7 +348,6 @@ class ExtaLifeAPI:
         except TCPCmdError:
             log.error("Command %s could not be executed", cmd)
             return None
-
 
     @classmethod
     def _get_channels_int(cls, data_js, dummy_ch=False):
@@ -394,17 +405,23 @@ class ExtaLifeAPI:
         """
         def_channel = None
         if dummy_ch:
-            def_channel = '#'
+            def_channel = "#"
         channels = []  # list of JSON dicts
         for cmd in data_js:
             for device in cmd["data"]["devices"]:
                 dev = device.copy()
                 dev.pop("state")
                 for state in device["state"]:
-                    ch_no = state.get("channel", def_channel) if def_channel else state["channel"]
+                    ch_no = (
+                        state.get("channel", def_channel)
+                        if def_channel
+                        else state["channel"]
+                    )
                     channel = {
                         # API channel, not TCP channel
-                        "id": str(device["id"]) + "-" + str(state.get("channel", def_channel)),
+                        "id": str(device["id"])
+                        + "-"
+                        + str(state.get("channel", def_channel)),
                         "data": {**state, **dev},
                     }
                     channels.append(channel)
@@ -498,6 +515,7 @@ class TCPCmdError(Exception):
             data = data[-1].get("data") if isinstance(data[-1], dict) else None
             self.error_code = None if not data else data.get("code")
 
+
 class TCPAdapter:
 
     TCP_BUFF_SIZE = 8192
@@ -505,12 +523,14 @@ class TCPAdapter:
 
     _cmd_in_execution = False
 
-    def __init__(self,
-            user,
-            password,
-            host=None,
-            on_connect_callback=None,
-            on_disconnect_callback=None):
+    def __init__(
+        self,
+        user,
+        password,
+        host=None,
+        on_connect_callback=None,
+        on_disconnect_callback=None,
+    ):
         self.user = user
         self.password = password
         self.host = None
@@ -519,7 +539,6 @@ class TCPAdapter:
         self._on_disconnect_callback = on_disconnect_callback
 
         self.tcp = None
-
 
     def connect(self, host):
         """
@@ -570,14 +589,13 @@ class TCPAdapter:
         """ Closes a socket instance cleanly """
         try:
             self.tcp.shutdown(socket.SHUT_RDWR)
-        except socket.error as e:
+        except OSError as e:
             pass
             # On OSX, socket shutdowns both sides if any side closes it
             # causing an error 57 'Socket is not connected' on shutdown
             # of the other side (or something), see
             # http://bugs.python.org/issue4397
             # note: stdlib fixed test, not behavior
-
 
     @staticmethod
     def discover_controller():
@@ -598,10 +616,13 @@ class TCPAdapter:
         # Bind to the server address
         try:
             sock.bind(server_address)
-        except socket.error as e:
+        except OSError as e:
             sock.close()
             sock = None
-            log.error("Could not connect to receive UDP multicast from EFC-01 on port %s", MCAST_PORT)
+            log.error(
+                "Could not connect to receive UDP multicast from EFC-01 on port %s",
+                MCAST_PORT,
+            )
             return False
         # Tell the operating system to add the socket to the multicast group
         # on all interfaces (join multicast group)
@@ -700,7 +721,7 @@ class TCPAdapter:
         try:
             # first receive some potential data waiting for us from other connections broadcasted to all connected sessions
             self.tcp.recv(self.TCP_BUFF_SIZE)
-        except socket.error:
+        except OSError:
             pass
         try:
             # and then send the command
@@ -739,7 +760,7 @@ class TCPAdapter:
                     "failure",
                 ):  # non-empty lists are rendered as True in Python - pylint warning
                     break
-            except socket.error:
+            except OSError:
                 # expected error due to nonblocking mode and no data found
                 # check if this is not running too long; otherwise it'll hang the whole integration
                 if (datetime.now() - time).seconds > SOCK_TIMEOUT:
@@ -756,7 +777,9 @@ class TCPAdapter:
 
         time = datetime.now()
         self.tcp.setblocking(1)
-        self.tcp.settimeout(1.5)  # work in blocking mode as otherwise we'll have high CPU load by the loop
+        self.tcp.settimeout(
+            1.5
+        )  # work in blocking mode as otherwise we'll have high CPU load by the loop
 
         resp = b""
         resp_js = list()
@@ -784,7 +807,7 @@ class TCPAdapter:
                 if resp_js and resp_js[-1].get("status") == "notification":
                     break
                 pass
-            except socket.error:
+            except OSError:
                 pass
 
         return resp_js[0]
@@ -853,6 +876,7 @@ class NotifThreadListener(threading.Thread):
 
     def run(self):
         import time
+
         while self._execute:
             try:
                 resp = self.connection.listen(9, self._interrupt_callback)
@@ -869,6 +893,7 @@ class NotifThreadListener(threading.Thread):
 
     def stop(self):
         import time
+
         self._execute = False
 
         # wait 2 seconds

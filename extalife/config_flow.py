@@ -1,25 +1,36 @@
 """Config flow to configure Exta Life component."""
 
+import logging
+
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.util import slugify
 import homeassistant.helpers.config_validation as cv
-import logging
+from homeassistant.util import slugify
 
-from .helpers.const import DOMAIN, CONF_CONTROLLER_IP, CONF_USER, CONF_PASSWORD, CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL, OPTIONS_LIGHT_ICONS_LIST, OPTIONS_COVER_INVERTED_CONTROL
+from .helpers.const import (
+    CONF_CONTROLLER_IP,
+    CONF_PASSWORD,
+    CONF_POLL_INTERVAL,
+    CONF_USER,
+    DEFAULT_POLL_INTERVAL,
+    DOMAIN,
+    OPTIONS_COVER_INVERTED_CONTROL,
+    OPTIONS_LIGHT_ICONS_LIST,
+)
+from .pyextalife import DEVICE_ICON_ARR_LIGHT, ExtaLifeAPI, TCPConnError
+
 _LOGGER = logging.getLogger(__name__)
-from .pyextalife import ExtaLifeAPI, TCPConnError, DEVICE_ICON_ARR_LIGHT
 
 
 @callback
 def configured_supla_hosts(hass):
     """Return a set of the configured supla hosts."""
-    return set(
+    return {
         (slugify(entry.data[DOMAIN]))
         for entry in hass.config_entries.async_entries(DOMAIN)
-    )
+    }
 
 
 @config_entries.HANDLERS.register(DOMAIN)
@@ -33,7 +44,7 @@ class ExtaLifeFlowHandler(config_entries.ConfigFlow):
         """Initialize Exta Life configuration flow."""
         self._user_input = {}
         self._import_data = None
-        self._controller_name = 'EFC-01'
+        self._controller_name = "EFC-01"
 
     @staticmethod
     @callback
@@ -58,6 +69,7 @@ class ExtaLifeFlowHandler(config_entries.ConfigFlow):
         """Handle flow start.
         This step can be called either from GUI from step confirm or by step_import
         during entry migration"""
+
         def api_connect(user, password, host):
             controller = ExtaLifeAPI()
             controller.connect(user, password, host=host)
@@ -65,19 +77,36 @@ class ExtaLifeFlowHandler(config_entries.ConfigFlow):
             return controller
 
         errors = {}
-        controller_ip = self._import_data.get(CONF_CONTROLLER_IP) if self._import_data else None
+        controller_ip = (
+            self._import_data.get(CONF_CONTROLLER_IP) if self._import_data else None
+        )
         description_placeholders = {"error_info": ""}
-        if user_input is None or (self._import_data is not None and self._import_data.get(CONF_CONTROLLER_IP) is None):
-            controller_ip = await self.hass.async_add_executor_job(ExtaLifeAPI.discover_controller)
+        if user_input is None or (
+            self._import_data is not None
+            and self._import_data.get(CONF_CONTROLLER_IP) is None
+        ):
+            controller_ip = await self.hass.async_add_executor_job(
+                ExtaLifeAPI.discover_controller
+            )
         if user_input is not None or self._import_data is not None:
             try:
                 if controller_ip is None:
                     controller_ip = user_input[CONF_CONTROLLER_IP]
-                user = user_input[CONF_USER] if user_input else self._import_data[CONF_USER]
-                password = user_input[CONF_PASSWORD] if user_input else self._import_data[CONF_PASSWORD]
+                user = (
+                    user_input[CONF_USER]
+                    if user_input
+                    else self._import_data[CONF_USER]
+                )
+                password = (
+                    user_input[CONF_PASSWORD]
+                    if user_input
+                    else self._import_data[CONF_PASSWORD]
+                )
 
                 # Test connection on this IP - get instance: this will already try to connect and logon
-                controller = await self.hass.async_add_executor_job(api_connect, user,password, controller_ip)
+                controller = await self.hass.async_add_executor_job(
+                    api_connect, user, password, controller_ip
+                )
 
                 self._user_input = user_input
 
@@ -100,15 +129,21 @@ class ExtaLifeFlowHandler(config_entries.ConfigFlow):
                 else:
                     _LOGGER.error(
                         "Cannot connect to your EFC-01 controller on IP %s with these credentials. Check your user and password and try again. Error code: %s",
-                        user_input[CONF_CONTROLLER_IP], conn_error.error_code
+                        user_input[CONF_CONTROLLER_IP],
+                        conn_error.error_code,
                     )
                     errors = {"base": "extalife_no_connection"}
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
-                {vol.Required(CONF_USER): str, vol.Required(CONF_PASSWORD): str, vol.Required(CONF_CONTROLLER_IP, default=controller_ip): str,
-                    vol.Optional(CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL): cv.positive_int,
+                {
+                    vol.Required(CONF_USER): str,
+                    vol.Required(CONF_PASSWORD): str,
+                    vol.Required(CONF_CONTROLLER_IP, default=controller_ip): str,
+                    vol.Optional(
+                        CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL
+                    ): cv.positive_int,
                 }
             ),
             errors=errors,
@@ -125,7 +160,12 @@ class ExtaLifeFlowHandler(config_entries.ConfigFlow):
         return self.async_show_form(
             step_id="title",
             data_schema=vol.Schema(
-                {vol.Optional("title", default=self._controller_name if self._controller_name else ''): str}
+                {
+                    vol.Optional(
+                        "title",
+                        default=self._controller_name if self._controller_name else "",
+                    ): str
+                }
             ),
             errors={},
             description_placeholders={},
@@ -137,10 +177,13 @@ class ExtaLifeFlowHandler(config_entries.ConfigFlow):
         self._import_data = import_data
 
         # add default poll interval if not provided in config
-        self._import_data[CONF_POLL_INTERVAL] = self._import_data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+        self._import_data[CONF_POLL_INTERVAL] = self._import_data.get(
+            CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
+        )
 
         # initiate the flow as from GUI, call step `init`
         return await self.async_step_init()
+
 
 def get_default_options():
     options = {}
@@ -172,8 +215,9 @@ class ExtaLifeOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="light",
             data_schema=vol.Schema(
                 {
-                    vol.Required("icons_list", default=self.options["light"].get("icons_list")): cv.multi_select(DEVICE_ICON_ARR_LIGHT)
-
+                    vol.Required(
+                        "icons_list", default=self.options["light"].get("icons_list")
+                    ): cv.multi_select(DEVICE_ICON_ARR_LIGHT)
                 }
             ),
         )
@@ -187,7 +231,10 @@ class ExtaLifeOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="cover",
             data_schema=vol.Schema(
                 {
-                    vol.Required("inverted_control", default=self.options["cover"].get("inverted_control")): bool
+                    vol.Required(
+                        "inverted_control",
+                        default=self.options["cover"].get("inverted_control"),
+                    ): bool
                 }
             ),
         )

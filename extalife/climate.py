@@ -2,16 +2,16 @@ import logging
 from pprint import pformat
 
 # from homeassistant.components.extalife import ExtaLifeChannel
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
-from homeassistant.components.climate import ClimateEntity, DOMAIN as DOMAIN_CLIMATE
+from homeassistant.components.climate import DOMAIN as DOMAIN_CLIMATE, ClimateEntity
 from homeassistant.components.climate.const import (
+    CURRENT_HVAC_HEAT,
+    CURRENT_HVAC_IDLE,
     HVAC_MODE_AUTO,
     HVAC_MODE_HEAT,
     SUPPORT_TARGET_TEMPERATURE,
-    CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_HEAT,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
@@ -39,34 +39,29 @@ EXTA_STATE_HVAC_MODE = {
 }
 
 # map Exta Life "work_mode" field
-HVAC_MODE_EXTA = {
-    HVAC_MODE_AUTO: True,
-    HVAC_MODE_HEAT: False
-}
+HVAC_MODE_EXTA = {HVAC_MODE_AUTO: True, HVAC_MODE_HEAT: False}
 
 # map Exta Life "power" field
-EXTA_HVAC_ACTION = {
-    1: CURRENT_HVAC_HEAT,
-    0: CURRENT_HVAC_IDLE
-}
+EXTA_HVAC_ACTION = {1: CURRENT_HVAC_HEAT, 0: CURRENT_HVAC_IDLE}
 
 # map HA action to Exta Life "state" field
-HVAC_ACTION_EXTA = {
-    CURRENT_HVAC_HEAT: 1,
-    CURRENT_HVAC_IDLE: 0
-}
+HVAC_ACTION_EXTA = {CURRENT_HVAC_HEAT: 1, CURRENT_HVAC_IDLE: 0}
 
 # map HA HVAC mode to Exta Life action
 HA_MODE_ACTION = {
     HVAC_MODE_AUTO: ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO,
-    HVAC_MODE_HEAT: ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL
+    HVAC_MODE_HEAT: ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL,
 }
+
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up an Exta Life heat controllers """
     # channels = hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS][DOMAIN_CLIMATE]
     core = Core.get(config_entry.entry_id)
@@ -76,6 +71,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
     async_add_entities([ExtaLifeClimate(device, config_entry) for device in channels])
 
     core.pop_channels(DOMAIN_CLIMATE)
+
 
 class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
     """Representation of Exta Life Thermostat."""
@@ -116,7 +112,9 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode (heat, auto => manual, auto)."""
-        if await self.async_action(HA_MODE_ACTION.get(hvac_mode), value=self.channel_data.get("value")):
+        if await self.async_action(
+            HA_MODE_ACTION.get(hvac_mode), value=self.channel_data.get("value")
+        ):
             self.channel_data["work_mode"] = HVAC_MODE_EXTA.get(hvac_mode)
             self.async_schedule_update_ha_state()
 
@@ -152,9 +150,10 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
     def device_state_attributes(self):
         """Return device specific state attributes."""
         data = self.channel_data
-        attrs = {"waiting_to_synchronize": data.get("waiting_to_synchronize"),
-                "battery_status": data.get("battery_status"),
-                "temperature_old": data.get("temperature_old")
+        attrs = {
+            "waiting_to_synchronize": data.get("waiting_to_synchronize"),
+            "battery_status": data.get("battery_status"),
+            "temperature_old": data.get("temperature_old"),
         }
 
         return attrs
@@ -165,7 +164,7 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
 
         ch_data = self.channel_data.copy()
         ch_data["work_mode"] = EXTA_STATE_HVAC_MODE.get(state)
-        ch_data["value"] = data.get("value")        # update set (target) temperature
+        ch_data["value"] = data.get("value")  # update set (target) temperature
 
         # update only if notification data contains new status; prevent HA event bus overloading
         if ch_data != self.channel_data:

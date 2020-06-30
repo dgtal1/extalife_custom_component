@@ -2,24 +2,23 @@
 import logging
 from pprint import pformat
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.cover import (
-    CoverEntity,
     ATTR_POSITION,
     DEVICE_CLASS_SHUTTER,
-    SUPPORT_OPEN,
+    DOMAIN as DOMAIN_COVER,
     SUPPORT_CLOSE,
+    SUPPORT_OPEN,
     SUPPORT_SET_POSITION,
     SUPPORT_STOP,
-    DOMAIN as DOMAIN_COVER,
+    CoverEntity,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
 from .helpers.const import DOMAIN, OPTIONS_COVER_INVERTED_CONTROL
 from .helpers.core import Core
 from .pyextalife import ExtaLifeAPI
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +27,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     """setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up Exta Life covers based on existing config."""
 
     core = Core.get(config_entry.entry_id)
@@ -38,6 +40,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
     async_add_entities([ExtaLifeCover(device, config_entry) for device in channels])
 
     core.pop_channels(DOMAIN_COVER)
+
 
 class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     """Representation of ExtaLife Cover"""
@@ -64,25 +67,37 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         # THIS CANNOT BE CHANGED AS IT'S HARDCODED IN HA GUI
 
         val = self.channel_data.get("value")
-        pos = val if self.is_inverted_control else 100-val
+        pos = val if self.is_inverted_control else 100 - val
 
-        _LOGGER.debug("current_cover_position for cover: %s. Model: %s, returned to HA: %s", self.entity_id, val, pos)
+        _LOGGER.debug(
+            "current_cover_position for cover: %s. Model: %s, returned to HA: %s",
+            self.entity_id,
+            val,
+            pos,
+        )
         return pos
 
     async def async_set_cover_position(self, **kwargs):
         """Move the cover to a specific position."""
         data = self.channel_data
         pos = int(kwargs.get(ATTR_POSITION))
-        value = pos if self.is_inverted_control else 100-pos
+        value = pos if self.is_inverted_control else 100 - pos
 
-        _LOGGER.debug("set_cover_position for cover: %s. From HA: %s, model: %s", self.entity_id, pos, value)
+        _LOGGER.debug(
+            "set_cover_position for cover: %s. From HA: %s, model: %s",
+            self.entity_id,
+            pos,
+            value,
+        )
         if await self.async_action(ExtaLifeAPI.ACTN_SET_POS, value=value):
             data["value"] = value
             self.async_schedule_update_ha_state()
 
     @property
     def is_inverted_control(self):
-        return self.config_entry.options.get(DOMAIN_COVER).get(OPTIONS_COVER_INVERTED_CONTROL, False)
+        return self.config_entry.options.get(DOMAIN_COVER).get(
+            OPTIONS_COVER_INVERTED_CONTROL, False
+        )
 
     @property
     def is_closed(self):
@@ -92,13 +107,18 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         if position is None:
             return None
         pos = ExtaLifeCover.POS_CLOSED
-        _LOGGER.debug("is_closed for cover: %s. model: %s, returned to HA: %s", self.entity_id, position, position == pos)
+        _LOGGER.debug(
+            "is_closed for cover: %s. model: %s, returned to HA: %s",
+            self.entity_id,
+            position,
+            position == pos,
+        )
         return position == pos
 
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
         data = self.channel_data
-        pos  = ExtaLifeCover.POS_OPEN
+        pos = ExtaLifeCover.POS_OPEN
 
         if await self.async_action(ExtaLifeAPI.ACTN_SET_POS, value=pos):
             data["value"] = pos
@@ -118,7 +138,6 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     async def async_stop_cover(self, **kwargs):
         """Stop the cover."""
         await self.async_action(ExtaLifeAPI.ACTN_STOP)
-
 
     def on_state_notification(self, data):
         """ React on state notification from controller """

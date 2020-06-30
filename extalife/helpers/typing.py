@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING
 
 DeviceType = "Device"
-DeviceManagerType = 'DeviceManager'
+DeviceManagerType = "DeviceManager"
 TransmitterManagerType = "TransmitterManager"
 ChannelDataManagerType = "ChannelDataManager"
-CoreType = 'Core'  #"Core"
-ExtaLifeTransmitterEventProcessorType = 'ExtaLifeTransmitterEventProcessor'
+CoreType = "Core"  # "Core"
+ExtaLifeTransmitterEventProcessorType = "ExtaLifeTransmitterEventProcessor"
 
 
 if TYPE_CHECKING:
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from ..transmitter import TransmitterManager
     from .. import ChannelDataManager
     from .core import Core
+
     DeviceType = Device
     DeviceManagerType = DeviceManager
     TransmitterManagerType = TransmitterManager

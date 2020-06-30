@@ -14,12 +14,14 @@ DEFAULT_POLL_INTERVAL = 5
 OPTIONS_LIGHT_ICONS_LIST = "icons_list"
 OPTIONS_COVER_INVERTED_CONTROL = "inverted_control"
 
-CONF_OPTIONS = 'options'       # additional per-platform configuration
-OPTIONS_SWITCH = 'switch'         # additional switch configuration
-OPTIONS_LIGHT = 'light'           # additional light configuration
-OPTIONS_LIGHT_ICONS_LIST = 'icons_list'           # map switches as lights for these Exta Life icons
-OPTIONS_COVER = 'cover'           # additional cover configuration
-OPTIONS_COVER_INV_CONTROL = 'inverted_control'
+CONF_OPTIONS = "options"  # additional per-platform configuration
+OPTIONS_SWITCH = "switch"  # additional switch configuration
+OPTIONS_LIGHT = "light"  # additional light configuration
+OPTIONS_LIGHT_ICONS_LIST = (
+    "icons_list"  # map switches as lights for these Exta Life icons
+)
+OPTIONS_COVER = "cover"  # additional cover configuration
+OPTIONS_COVER_INV_CONTROL = "inverted_control"
 
 # signals
 SIGNAL_DATA_UPDATED = f"{DOMAIN}_data_updated"

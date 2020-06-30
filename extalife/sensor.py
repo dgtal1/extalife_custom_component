@@ -7,22 +7,22 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_ILLUMINANCE,
-    DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_PRESSURE,
-    TEMP_CELSIUS,
+    DEVICE_CLASS_TEMPERATURE,
     PRESSURE_HPA,
+    TEMP_CELSIUS,
 )
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.core import Core
 from .helpers.const import DOMAIN
+from .helpers.core import Core
 from .pyextalife import (
-    DEVICE_ARR_SENS_TEMP,
-    DEVICE_ARR_SENS_LIGHT,
     DEVICE_ARR_SENS_HUMID,
+    DEVICE_ARR_SENS_LIGHT,
     DEVICE_ARR_SENS_MULTI,
     DEVICE_ARR_SENS_PRESSURE,
+    DEVICE_ARR_SENS_TEMP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,7 +32,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     """setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up Exta Life sensors based on existing config."""
 
     core = Core.get(config_entry.entry_id)
@@ -42,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
     async_add_entities([ExtaLifeSensor(device, config_entry) for device in channels])
 
     core.pop_channels(DOMAIN_SENSOR)
+
 
 class ExtaLifeSensor(ExtaLifeChannel):
     """Representation of Exta Life Sensors"""

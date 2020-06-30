@@ -1,31 +1,31 @@
 import logging
 from pprint import pformat
 
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import (
-    async_dispatcher_send,
     async_dispatcher_connect,
+    async_dispatcher_send,
 )
+from homeassistant.helpers.typing import HomeAssistantType
 
 from ..pyextalife import (
-    ExtaLifeAPI,
-    DEVICE_MAP_TYPE_TO_MODEL,
     DEVICE_ARR_ALL_TRANSMITTER,
+    DEVICE_MAP_TYPE_TO_MODEL,
     PRODUCT_MANUFACTURER,
     PRODUCT_SERIES,
+    ExtaLifeAPI,
 )
 from .const import DOMAIN as DOMAIN, SIGNAL_NOTIF_STATE_UPDATED
-
 from .device import Device
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class PseudoPlatform():
+class PseudoPlatform:
     def __init__(self, config_entry: ConfigEntry, channel_data: dict):
         from .core import Core
+
         self._core = Core.get(config_entry.entry_id)
         self._hass = self._core.get_hass()
         self._config_entry = config_entry
@@ -35,7 +35,7 @@ class PseudoPlatform():
         self._signal_data_notif_remove_callback = None
 
         # HA device id
-        self._device : Device = None
+        self._device: Device = None
 
     @property
     def controller(self) -> ExtaLifeAPI:
@@ -55,7 +55,7 @@ class PseudoPlatform():
     def device_info(self) -> dict:
         model = DEVICE_MAP_TYPE_TO_MODEL.get(self._channel_data.get("type"))
         return {
-            "identifiers": {(DOMAIN, self._channel_data.get('serial'))},
+            "identifiers": {(DOMAIN, self._channel_data.get("serial"))},
             "name": f"{PRODUCT_MANUFACTURER} {PRODUCT_SERIES} {model}",
             "manufacturer": PRODUCT_MANUFACTURER,
             "model": model,
@@ -87,4 +87,3 @@ class PseudoPlatform():
 
     def _async_state_notif_update_callback(self, data):
         pass
-

@@ -1,8 +1,11 @@
 """Support for Exta Life binary sensor devices e.g. leakage sensor, door/window open sensor"""
 import logging
 from pprint import pformat
-from homeassistant.components.binary_sensor import BinarySensorEntity, DOMAIN as DOMAIN_BINARY_SENSOR
-from homeassistant.helpers.typing import HomeAssistantType
+
+from homeassistant.components.binary_sensor import (
+    DOMAIN as DOMAIN_BINARY_SENSOR,
+    BinarySensorEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     DEVICE_CLASS_HUMIDITY,
@@ -10,14 +13,15 @@ from homeassistant.const import (
     DEVICE_CLASS_TEMPERATURE,
     TEMP_CELSIUS,
 )
+from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
 from .helpers.const import DOMAIN
 from .helpers.core import Core
 from .pyextalife import (
-    DEVICE_ARR_SENS_WATER,
     DEVICE_ARR_SENS_MOTION,
     DEVICE_ARR_SENS_OPENCLOSE,
+    DEVICE_ARR_SENS_WATER,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,16 +31,22 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     """"setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up Exta Life binary sensors based on existing config."""
 
     core = Core.get(config_entry.entry_id)
     channels = core.get_channels(DOMAIN_BINARY_SENSOR)
 
     _LOGGER.debug("Discovery: %s", pformat(channels))
-    async_add_entities([ExtaLifeBinarySensor(device, config_entry) for device in channels])
+    async_add_entities(
+        [ExtaLifeBinarySensor(device, config_entry) for device in channels]
+    )
 
     core.pop_channels(DOMAIN_BINARY_SENSOR)
+
 
 class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
     """Representation of an ExtaLife binary sensors"""
@@ -83,7 +93,6 @@ class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
             value,
         )
         return value
-
 
     @property
     def device_class(self):

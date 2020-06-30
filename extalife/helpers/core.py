@@ -1,28 +1,34 @@
 import asyncio
-import logging
-import importlib
 import datetime
-from typing import Callable, Any
-from homeassistant.helpers.event import async_track_time_interval
-import homeassistant.helpers.entity_registry as er
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import HomeAssistantType, ConfigType
+import importlib
+import logging
+from typing import Any, Callable
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.helpers.entity import Entity
+import homeassistant.helpers.entity_registry as er
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 
-from .const import DATA_CORE, DOMAIN
 from ..pyextalife import ExtaLifeAPI
-from .typing import TransmitterManagerType, DeviceManagerType, TransmitterManagerType, ChannelDataManagerType, CoreType
+from .const import DATA_CORE, DOMAIN
 from .services import ExtaLifeServices
-
+from .typing import (
+    ChannelDataManagerType,
+    CoreType,
+    DeviceManagerType,
+    TransmitterManagerType,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-class Core():
+
+class Core:
 
     _inst = dict()
     _hass: HomeAssistantType = None
-    _services : ExtaLifeServices = None
+    _services: ExtaLifeServices = None
 
     @classmethod
     def create(cls, hass: HomeAssistantType, config_entry: ConfigEntry):
@@ -33,11 +39,13 @@ class Core():
         hass.data[DOMAIN][DATA_CORE] = cls._inst
 
         # register callback for HomeAssistant Stop event
-        cls._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, cls._on_homeassistant_stop)
+        cls._hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, cls._on_homeassistant_stop
+        )
         return inst
 
     @classmethod
-    def get(cls, entry_id: ConfigEntry.entry_id) -> 'Core':  # forward
+    def get(cls, entry_id: ConfigEntry.entry_id) -> "Core":  # forward
         """ Get instance of the Core object based on Config Entry ID """
         return cls._inst.get(entry_id)
 
@@ -51,12 +59,16 @@ class Core():
         from .device import DeviceManager
         from ..transmitter import TransmitterManager
         from .. import ChannelDataManager
+
         self._inst[config_entry.entry_id] = self
 
         self._config_entry = config_entry
         self._dev_manager = DeviceManager(config_entry, self)
         self._transmitter_manager = TransmitterManager(config_entry)
-        self._api = ExtaLifeAPI(on_connect=self._on_reconnect_callback, on_disconnect=self._on_disconnect_callback)
+        self._api = ExtaLifeAPI(
+            on_connect=self._on_reconnect_callback,
+            on_disconnect=self._on_disconnect_callback,
+        )
         self._signal_callbacks = []
         self._track_time_callbacks = []
         self._platforms = dict()
@@ -84,9 +96,11 @@ class Core():
             await self._services.async_unregister_services()
 
         for platform in self._platforms:
-            await self.hass.config_entries.async_forward_entry_unload(self.config_entry, platform)
+            await self.hass.config_entries.async_forward_entry_unload(
+                self.config_entry, platform
+            )
 
-        await self. async_unload_custom_platforms()
+        await self.async_unload_custom_platforms()
 
         # remove instance only after everything is unloaded
         self._inst.pop(self.config_entry.entry_id)
@@ -104,7 +118,11 @@ class Core():
     @classmethod
     async def _callbacks_cleanup(cls, entry_id=None):
         """ Cleanup signal callbacks and callback-handling asyncio queues """
-        instances = [cls.get(entry_id)] if entry_id else [inst for id, inst in cls._inst.items()]
+        instances = (
+            [cls.get(entry_id)]
+            if entry_id
+            else [inst for id, inst in cls._inst.items()]
+        )
         for inst in instances:
             inst._queue.put_nowait(None)  # terminate callback worker
             inst.unregister_signal_callbacks()
@@ -129,7 +147,6 @@ class Core():
         if self._controller_entity is not None:
             self._controller_entity.schedule_update_ha_state()
 
-
     def _on_disconnect_callback(self):
         """ Execute actions on disconnection to controller """
 
@@ -140,6 +157,7 @@ class Core():
     async def register_controller(self):
         """ Register controller in Device Registry and create its entity """
         from .. import ExtaLifeController
+
         await ExtaLifeController.register_controller(self.config_entry.entry_id)
 
     def controller_entity_added_to_hass(self, entity):
@@ -156,7 +174,7 @@ class Core():
         self._poller = manager
 
     @property
-    def data_manager(self) -> 'ChannelDataManager':
+    def data_manager(self) -> "ChannelDataManager":
         return self._data_manager
 
     @property
@@ -168,7 +186,7 @@ class Core():
         return Core._hass
 
     @property
-    def dev_manager(self) -> 'DeviceManager':
+    def dev_manager(self) -> "DeviceManager":
         return self._dev_manager
 
     @property
@@ -215,18 +233,18 @@ class Core():
     async def async_setup_custom_platforms(self, module):
         """ Setup other, custom (pseudo)platforms """
 
-        package = '.'.join(__package__.split('.')[:-1])        # 1 level above current package
-        module = importlib.import_module('.' + module, package=package)
-        func = getattr(module, 'async_setup_entry')
+        package = ".".join(__package__.split(".")[:-1])  # 1 level above current package
+        module = importlib.import_module("." + module, package=package)
+        func = getattr(module, "async_setup_entry")
         _LOGGER.debug("async_setup_custom_platforms(), func: %s", func)
         await func(self.hass, self.config_entry)
 
     async def async_unload_custom_platforms(self):
         """ Unload other, custom (pseudo)platforms """
-        package = '.'.join(__package__.split('.')[:-1])        # 1 level above current package
+        package = ".".join(__package__.split(".")[:-1])  # 1 level above current package
         for platform, channels in self._platforms_cust.items():
-            module = importlib.import_module('.' + platform, package=package)
-            func = getattr(module, 'async_unload_entry')
+            module = importlib.import_module("." + platform, package=package)
+            func = getattr(module, "async_unload_entry")
             await func(self._hass, self.config_entry)
 
     def storage_add(self, id, inst):
@@ -254,13 +272,12 @@ class Core():
 
         return _managed_remove_callback
 
-
     def async_signal_register(self, signal: str, target) -> Callable:
         """Connect a callable function to a signal.
 
         This method must be run in the event loop.
         """
-        signal_ext = str(self._config_entry.entry_id)+signal
+        signal_ext = str(self._config_entry.entry_id) + signal
         if signal not in self._signals:
             self._signals[signal_ext] = []
 
@@ -282,7 +299,7 @@ class Core():
 
         This method must be run in the event loop.
         """
-        signal_int = str(self._config_entry.entry_id)+signal
+        signal_int = str(self._config_entry.entry_id) + signal
         target_list = self._signals.get(signal_int, [])
 
         for target in target_list:
@@ -293,7 +310,7 @@ class Core():
 
         This method must be run in the event loop.
         """
-        signal_int = str(self._config_entry.entry_id)+signal
+        signal_int = str(self._config_entry.entry_id) + signal
         target_list = self._signals.get(signal_int, [])
 
         for target in target_list:
@@ -317,4 +334,3 @@ class Core():
                 callback(data)
 
         _LOGGER.debug("_queue_worker done")
-
