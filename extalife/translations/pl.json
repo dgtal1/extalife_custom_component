@@ -1,6 +1,6 @@
 {
+  "title": "Exta Life",
   "config": {
-    "title": "Exta Life",
     "step": {
       "confirm": {
         "description": "Czy chcesz skonfigurować teraz integrację Exta Life oraz wyszukać swoje urządzenia z tej serii?",

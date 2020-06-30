@@ -1,6 +1,6 @@
 {
+  "title": "Exta Life",
   "config": {
-    "title": "Exta Life",
     "step": {
       "confirm": {
         "description": "![Supla logo](/static/icons/supla_zamel_logo.png)\n\nDo you want to set up integration with Exta Life controller (EFC-01) and discover your devices?",
