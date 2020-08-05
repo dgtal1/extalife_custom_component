@@ -266,8 +266,11 @@ class Core():
 
         self._signals[signal_ext].append(target)
 
+        _LOGGER.debug("async_signal_register(), signal: %s, signal_ext: %s, target: %s", signal, signal_ext, target)
+
         def async_remove_signal() -> None:
             """Remove signal listener."""
+            _LOGGER.debug("async_remove_signal(), signal: %s, signal_ext: %s, target: %s", signal, signal_ext, target)
             try:
                 self._signals[signal_ext].remove(target)
             except (KeyError, ValueError):
@@ -285,7 +288,10 @@ class Core():
         signal_int = str(self._config_entry.entry_id)+signal
         target_list = self._signals.get(signal_int, [])
 
+        _LOGGER.debug("async_signal_send(), signal: %s, signal_int: %s, target_list: %s, *args: %s", signal, signal_int, target_list, args)
+
         for target in target_list:
+            _LOGGER.debug("async_signal_send(), target: %s", target)
             self._hass.async_add_job(target, *args)
 
     def async_signal_send_sync(self, signal: str, args) -> None:
