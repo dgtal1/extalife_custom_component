@@ -261,7 +261,7 @@ class Core():
         This method must be run in the event loop.
         """
         signal_ext = str(self._config_entry.entry_id)+signal
-        if signal not in self._signals:
+        if signal_ext not in self._signals:
             self._signals[signal_ext] = []
 
         self._signals[signal_ext].append(target)
