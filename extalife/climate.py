@@ -151,13 +151,18 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
     @property
     def device_state_attributes(self):
         """Return device specific state attributes."""
+        attr = super().device_state_attributes
+
         data = self.channel_data
-        attrs = {"waiting_to_synchronize": data.get("waiting_to_synchronize"),
+        attr.update(
+            {
+                "waiting_to_synchronize": data.get("waiting_to_synchronize"),
                 "battery_status": data.get("battery_status"),
                 "temperature_old": data.get("temperature_old")
-        }
+            }
+        )
 
-        return attrs
+        return attr
 
     def on_state_notification(self, data):
         """ React on state notification from controller """
