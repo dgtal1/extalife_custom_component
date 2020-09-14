@@ -33,7 +33,7 @@
       "general": {
         "description": "Ustawienia ogólne",
         "data": {
-          "poll_interval": "Interwał czasowy do odpytywania o aktualny stan urządzeń",
+          "poll_interval": "Interwał czasowy do odpytywania o aktualny stan urządzeń (minuty)",
           "disable_not_responding": "Wyszarzaj encję gdy urządzenie nie odpowiada (tak jak w aplikacji Exta Life)"
         }
       },
