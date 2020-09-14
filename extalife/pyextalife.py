@@ -4,7 +4,6 @@ from __future__ import print_function
 import logging
 import socket
 import json
-import threading
 import asyncio
 from asyncio.events import AbstractEventLoop
 import attr
