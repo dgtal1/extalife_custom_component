@@ -1,6 +1,6 @@
 {
+  "title": "Exta Life",
   "config": {
-    "title": "Exta Life",
     "step": {
       "confirm": {
         "description": "Czy chcesz skonfigurować teraz integrację Exta Life oraz wyszukać swoje urządzenia z tej serii?",
@@ -12,8 +12,7 @@
         "data": {
           "user": "Użytkownik",
           "password": "Hasło",
-          "controller_ip": "IP kontrolera EFC-01",
-          "poll_interval": "Interwał czasowy do odpytywania o aktualny stan urządzeń"
+          "controller_ip": "IP kontrolera EFC-01"
         }
       },
       "title": {
@@ -31,6 +30,13 @@
   },
   "options": {
     "step": {
+      "general": {
+        "description": "Ustawienia ogólne",
+        "data": {
+          "poll_interval": "Interwał czasowy do odpytywania o aktualny stan urządzeń",
+          "disable_not_responding": "Wyszarzaj encję gdy urządzenie nie odpowiada (tak jak w aplikacji Exta Life)"
+        }
+      },
       "light": {
         "description": "Ustawienia dla encji świateł (platforma: light)",
         "data": {
