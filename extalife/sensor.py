@@ -92,7 +92,6 @@ class ExtaLifeSensor(ExtaLifeChannel):
             self._dev_class = DEVICE_CLASS_ILLUMINANCE
             self._unit = "lx"
 
-        self._attributes = dict()
 
     def get_unique_id(self) -> str:
         """Override return a unique ID."""
@@ -130,24 +129,25 @@ class ExtaLifeSensor(ExtaLifeChannel):
 
     @property
     def device_state_attributes(self):
+        attr = super().device_state_attributes
         """Return device specific state attributes."""
         data = self.channel_data
         if data.get("sync_time") is not None:
-            self._attributes.update({"sync_time": data.get("sync_time")})
+            attr.update({"sync_time": data.get("sync_time")})
         if data.get("last_sync") is not None:
-            self._attributes.update({"last_sync": data.get("last_sync")})
+            attr.update({"last_sync": data.get("last_sync")})
         if data.get("battery_status") is not None:
-            self._attributes.update({"battery_status": data.get("battery_status")})
+            attr.update({"battery_status": data.get("battery_status")})
 
         if not self._monitored_value:
             if data.get("value_1") is not None:
-                self._attributes.update({"value_1": data.get("value_1")})
+                attr.update({"value_1": data.get("value_1")})
             if data.get("value_2") is not None:
-                self._attributes.update({"value_2": data.get("value_2")})
+                attr.update({"value_2": data.get("value_2")})
             if data.get("value_3") is not None:
-                self._attributes.update({"value_3": data.get("value_3")})
+                attr.update({"value_3": data.get("value_3")})
 
-        return self._attributes
+        return attr
 
     def on_state_notification(self, data):
         """ React on state notification from controller """
