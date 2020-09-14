@@ -12,6 +12,7 @@ from .typing import CoreType
 
 # services
 SVC_RESTART = "restart"  # restart controller
+SVC_REFRESH_STATE = "refresh_state"  # execute status refresh, fetch new status from controller
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +21,8 @@ SCHEMA_BASE = vol.Schema(
         vol.Required(CONF_ENTITY_ID): cv.entity_id
     }
 )
-SCHEMA_RESTART = SCHEMA_TEST_BUTTON = SCHEMA_BASE
+SCHEMA_REFRESH_STATE = SCHEMA_RESTART = SCHEMA_TEST_BUTTON = SCHEMA_BASE
+
 SCHEMA_TEST_BUTTON = vol.Schema(
     {
         vol.Required(CONF_ENTITY_ID): cv.entity_id,
@@ -51,6 +53,10 @@ class ExtaLifeServices():
         """ register all Exta Life integration services """
         self._hass.services.async_register(DOMAIN, SVC_RESTART, self._handle_restart, SCHEMA_RESTART)
         self._services.append(SVC_RESTART)
+
+        self._hass.services.async_register(DOMAIN, SVC_REFRESH_STATE, self._handle_refresh_state, SCHEMA_REFRESH_STATE)
+        self._services.append(SVC_REFRESH_STATE)
+
         self._hass.services.async_register(DOMAIN, 'test_button', self._handle_test_button, SCHEMA_TEST_BUTTON)
         self._services.append('test_button')
 
@@ -64,7 +70,16 @@ class ExtaLifeServices():
         entity_id = call.data.get(CONF_ENTITY_ID)
 
         core = self._get_core(entity_id)
-        core.api.restart()
+
+        asyncio.run_coroutine_threadsafe(core.api.async_restart(), self._hass.loop)
+
+    def _handle_refresh_state(self, call):
+        """ service: extalife.refresh_state """
+        entity_id = call.data.get(CONF_ENTITY_ID)
+
+        core = self._get_core(entity_id)
+        asyncio.run_coroutine_threadsafe(core.data_manager.async_execute_status_polling(), self._hass.loop)
+        #  core.data_manager.async_execute_status_polling
 
     def _handle_test_button(self, call):
         from .common import PseudoPlatform
