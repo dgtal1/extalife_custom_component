@@ -607,15 +607,11 @@ class ExtaLifeChannel(Entity):
         _LOGGER.debug("async_update() for entity: %s, data to be updated: %s", self.entity_id, data)
 
         if data is None:
-
             self.data_available = False
             return
 
         self.data_available = True
-
-        # update only if data found
-        if data is not None:
-            self.channel_data = data
+        self.channel_data = data
 
     def sync_data_update_ha(self):
         """ Performs update of Data Manager data with Entity data and calls HA state update.
