@@ -596,7 +596,7 @@ class ExtaLifeChannel(Entity):
 
         return self.data_available == True and is_timeout == False
 
-    async def _async_update(self):
+    async def async_update(self):
         """Call to update state."""
         # data poller object contains PyExtaLife API channel data dict value pair: {("id"): ("data")}
         channel_indx = self.data_poller.channels_indx
