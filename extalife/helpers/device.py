@@ -4,8 +4,6 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.automation import AutomationActionType, state
-from homeassistant.components.device_automation import TRIGGER_BASE_SCHEMA
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers import device_registry as dr
 from homeassistant.const import (
