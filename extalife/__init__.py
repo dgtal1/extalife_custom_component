@@ -103,8 +103,11 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.options = {**options}
 
         new = {**config_entry.data}
-        new.pop(CONF_POLL_INTERVAL)
-        new.pop(CONF_OPTIONS)       # get rid of errorneously migrated options from integration 1.0
+        try:
+            new.pop(CONF_POLL_INTERVAL)
+            new.pop(CONF_OPTIONS)       # get rid of errorneously migrated options from integration 1.0
+        except:
+            pass
         config_entry.data = {**new}
 
         config_entry.version = 2
