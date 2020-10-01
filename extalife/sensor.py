@@ -5,6 +5,7 @@ from pprint import pformat
 from homeassistant.components.sensor import DOMAIN as DOMAIN_SENSOR
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    DEVICE_CLASS_ENERGY,
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_ILLUMINANCE,
     DEVICE_CLASS_TEMPERATURE,
@@ -18,6 +19,7 @@ from . import ExtaLifeChannel
 from .helpers.core import Core
 from .helpers.const import DOMAIN
 from .pyextalife import (
+    DEVICE_ARR_SENS_ENERGY_METER,
     DEVICE_ARR_SENS_TEMP,
     DEVICE_ARR_SENS_LIGHT,
     DEVICE_ARR_SENS_HUMID,
@@ -92,6 +94,10 @@ class ExtaLifeSensor(ExtaLifeChannel):
             self._dev_class = DEVICE_CLASS_ILLUMINANCE
             self._unit = "lx"
 
+        if dev_type in DEVICE_ARR_SENS_ENERGY_METER:
+            self._dev_class = DEVICE_CLASS_ENERGY
+            self._unit = "kWh"
+
 
     def get_unique_id(self) -> str:
         """Override return a unique ID."""
@@ -104,7 +110,11 @@ class ExtaLifeSensor(ExtaLifeChannel):
     def state(self):
         """Return state of the sensor"""
         # multisensor?
-        state = self.channel_data.get(self._monitored_value)
+        # state = self.channel_data.get(self._monitored_value)
+
+        #MEM-21
+        energy = self.channel_data.get("total_energy")
+        state = energy / 100000 if energy else None
 
         if not state:
             state = self.channel_data.get("value")
@@ -138,6 +148,19 @@ class ExtaLifeSensor(ExtaLifeChannel):
             attr.update({"last_sync": data.get("last_sync")})
         if data.get("battery_status") is not None:
             attr.update({"battery_status": data.get("battery_status")})
+
+        if data.get("total_energy") is not None:
+            attr.update({"total_energy": data.get("total_energy")})
+
+        # MEM-21
+        var = data.get("phase")
+        if var is not None:
+            c = 0
+            for phase in var:
+                c += 1
+                for k,v in phase.items():
+                    phase_variable = f"phase_{c}_{k}"
+                    attr.update({phase_variable: k})
 
         if not self._monitored_value:
             if data.get("value_1") is not None:
