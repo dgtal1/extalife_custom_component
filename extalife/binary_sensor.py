@@ -92,7 +92,7 @@ class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
     def device_state_attributes(self):
         """Return device specific state attributes."""
         attr = super().device_state_attributes
-        data = self.channel_data  #get("data")
+        data = self.channel_data
         # general sensor attributes
         if data.get("sync_time") is not None:
             attr.update({"sync_time": data.get("sync_time")})
