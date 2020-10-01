@@ -116,3 +116,4 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
             # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()
 
+ 
