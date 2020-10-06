@@ -343,7 +343,7 @@ class ExtaLifeAPI:
         """ Called when notification from the controller is received """
         if self._on_notification_callback(data) is not None and data.get("command") == self.CMD_CONTROL_DEVICE:
             # forward only device status changes to the listener
-            _on_notification_callback(data)
+            self._on_notification_callback(data)
 
     def set_notification_callback(self, callback):
         """ update Notification callback assignment """
