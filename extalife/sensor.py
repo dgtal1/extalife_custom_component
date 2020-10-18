@@ -170,6 +170,8 @@ class ExtaLifeSensor(ExtaLifeChannel):
             if data.get("value_3") is not None:
                 attr.update({"value_3": data.get("value_3")})
 
+        self.format_state_attr(attr)
+
         return attr
 
     def on_state_notification(self, data):
