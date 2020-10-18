@@ -168,6 +168,8 @@ class Core():
             self._controller_entity.schedule_update_ha_state()
 
         # need to schedule periodic reconnection attempt
+        if self._periodic_reconnect_remove_callback is not None:
+            self._periodic_reconnect_remove_callback()
         self._periodic_reconnect_remove_callback = self.async_track_time_interval(self._periodic_reconnect_callback, datetime.timedelta(seconds=30))
 
         # try immediate reconnection first
