@@ -634,6 +634,27 @@ class ExtaLifeChannel(Entity):
             }
 
 
+    def format_state_attr(self, attr: dict):
+        from re import match
+        """ Format state atteibutes based on name and other criteria.
+        Can be overriden in dedicated subclasses to refine formatiing """
+        for k,v in attr.items():
+            val = v
+            if match("*voltage", k):
+                v = v / 100
+            elif match("*current", k):
+                v = v / 1000
+            elif match("*energy_consumption", k):
+                v = v / 100000
+            elif match("*frequency", k):
+                v = v / 100
+            elif match("*phase_shift", k):
+                v = v / 10
+            elif match("*phase_energy", k):
+                v = v / 10000
+            if val != v:
+                attr.update({k:v})
+
 
 class ExtaLifeController(Entity):
     """Base class of a ExtaLife Channel (an equivalent of HA's Entity)."""
@@ -732,28 +753,8 @@ class ExtaLifeController(Entity):
                 "software_version": self.api.sw_version,
                 "name": self.api.name}
 
-    def format_state_attr(self, attr: dict):
-        from re import match
-        """ Format state atteibutes based on name and other criteria.
-        Can be overriden in dedicated subclasses to refine formatiing """
-        for k,v in attr.items():
-            val = v
-            if match("*voltage", k):
-                v = v / 100
-            elif match("*current", k):
-                v = v / 1000
-            elif match("*energy_consumption", k):
-                v = v / 100000
-            elif match("*frequency", k):
-                v = v / 100
-            elif match("*phase_shift", k):
-                v = v / 10
-            elif match("*phase_energy", k):
-                v = v / 10000
-            if val != v:
-                attr.update({k:v})
-
     async def async_update(self):
         """ Entity update callback """
         # not necessary for the controller entity; will be updated on demand, externally
         pass
+
