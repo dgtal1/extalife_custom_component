@@ -171,7 +171,7 @@ class Core():
         self._periodic_reconnect_remove_callback = self.async_track_time_interval(self._periodic_reconnect_callback, datetime.timedelta(seconds=30))
 
         # try immediate reconnection first
-        self._periodic_reconnect_callback(False)
+        # self._periodic_reconnect_callback(False)
 
     def _on_status_notification_callback(self, msg):
         if self._is_unloading or self._is_stopping:
