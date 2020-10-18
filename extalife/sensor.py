@@ -160,7 +160,7 @@ class ExtaLifeSensor(ExtaLifeChannel):
                 c += 1
                 for k,v in phase.items():
                     phase_variable = f"phase_{c}_{k}"
-                    attr.update({phase_variable: k})
+                    attr.update({phase_variable: v})
 
         if not self._monitored_value:
             if data.get("value_1") is not None:
