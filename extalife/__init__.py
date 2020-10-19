@@ -651,7 +651,7 @@ class ExtaLifeChannel(Entity):
             elif search("phase_shift", k):
                 v = v / 10
             elif search("phase_energy", k):
-                v = v / 10000
+                v = v / 100000
             if val != v:
                 attr.update({k:v})
 
