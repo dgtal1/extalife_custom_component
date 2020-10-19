@@ -635,22 +635,22 @@ class ExtaLifeChannel(Entity):
 
 
     def format_state_attr(self, attr: dict):
-        from re import match
+        from re import search
         """ Format state atteibutes based on name and other criteria.
         Can be overriden in dedicated subclasses to refine formatiing """
         for k,v in attr.items():
             val = v
-            if match("*voltage", k):
+            if search("voltage", k):
                 v = v / 100
-            elif match("*current", k):
+            elif search("current", k):
                 v = v / 1000
-            elif match("*energy_consumption", k):
+            elif search("energy_consumption", k):
                 v = v / 100000
-            elif match("*frequency", k):
+            elif search("frequency", k):
                 v = v / 100
-            elif match("*phase_shift", k):
+            elif search("phase_shift", k):
                 v = v / 10
-            elif match("*phase_energy", k):
+            elif search("phase_energy", k):
                 v = v / 10000
             if val != v:
                 attr.update({k:v})
