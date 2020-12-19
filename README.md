@@ -1,4 +1,4 @@
-<img src="https://github.com/home-assistant/assets/blob/master/logo.png" width="200px"/>
+<img src="https://github.com/home-assistant/assets/blob/master/logo/logo.png" width="200px"/>
 
 [![ExtaLife Logo](https://extalife.pl/wp-content/themes/wi/images/logo.png)](https://www.forumextalife.pl/) 
 
