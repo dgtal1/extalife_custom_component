@@ -108,9 +108,9 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
             _LOGGER.debug("is_closed for cover: %s. model: %s, returned to HA: %s", self.entity_id, position, position == pos)
             return position == pos
         
-        if gate_state is None:
-            return None
-        return gate_state == 3
+        if gate_state is not None:
+            return gate_state == 3
+        return None
     
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
