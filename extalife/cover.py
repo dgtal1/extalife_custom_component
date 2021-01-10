@@ -7,6 +7,7 @@ from homeassistant.components.cover import (
     CoverEntity,
     ATTR_POSITION,
     DEVICE_CLASS_SHUTTER,
+    DEVICE_CLASS_GATE,
     SUPPORT_OPEN,
     SUPPORT_CLOSE,
     SUPPORT_SET_POSITION,
@@ -48,7 +49,8 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_SHUTTER
+        dev_type = self.channel_data.get("type")
+        return DEVICE_CLASS_SHUTTER if dev_type in DEVICE_ARR_COVER else DEVICE_CLASS_GATE 
 
     @property
     def supported_features(self):
