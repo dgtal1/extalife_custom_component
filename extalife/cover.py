@@ -101,13 +101,17 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     def is_closed(self):
         """Return if the cover is closed (affects roller icon and entity status)."""
         position = self.channel_data.get("value")
-
-        if position is None:
+        gate_state = self.channel_data.get("channel_state")
+        
+        if position is not None:
+            pos = ExtaLifeCover.POS_CLOSED
+            _LOGGER.debug("is_closed for cover: %s. model: %s, returned to HA: %s", self.entity_id, position, position == pos)
+            return position == pos
+        
+        if gate_state is None:
             return None
-        pos = ExtaLifeCover.POS_CLOSED
-        _LOGGER.debug("is_closed for cover: %s. model: %s, returned to HA: %s", self.entity_id, position, position == pos)
-        return position == pos
-
+        return gate_state == 3
+    
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
         data = self.channel_data
@@ -145,8 +149,10 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     def on_state_notification(self, data):
         """ React on state notification from controller """
         ch_data = self.channel_data.copy()
-        ch_data["value"] = data.get("value")
-
+        if ch_data.get("value") is not None:
+            ch_data["value"] = data.get("value")
+        if ch_data.get("channel_state") is not None:
+            ch_data["channel_state"] = data.get("channel_state")
         # update only if notification data contains new status; prevent HA event bus overloading
         if ch_data != self.channel_data:
             self.channel_data.update(ch_data)
