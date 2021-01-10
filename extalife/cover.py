@@ -73,7 +73,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         # ARROW DOWN - close cover
         # THIS CANNOT BE CHANGED AS IT'S HARDCODED IN HA GUI
 
-        if self.is_exta_free:
+        if self.is_exta_free or self.device_class == DEVICE_CLASS_GATE:
             return
 
         val = self.channel_data.get("value")
@@ -117,11 +117,12 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         data = self.channel_data
         pos  = ExtaLifeCover.POS_OPEN
 
-        if not self.is_exta_free:
-            if await self.async_action(ExtaLifeAPI.ACTN_SET_POS, value=pos):
+        if not self.is_exta_free:            
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE else ExtaLifeAPI.ACTN_SET_GATE_POS
+            if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("open_cover for cover: %s. model: %s", self.entity_id, pos)
-                self.async_schedule_update_ha_state()
+                self.async_schedule_update_ha_state()               
         else:
             if await self.async_action(ExtaLifeAPI.ACTN_EXFREE_UP_PRESS) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_UP_RELEASE):
                 self.async_schedule_update_ha_state()
@@ -132,7 +133,8 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         pos = ExtaLifeCover.POS_CLOSED
 
         if not self.is_exta_free:
-            if await self.async_action(ExtaLifeAPI.ACTN_SET_POS, value=pos):
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE else ExtaLifeAPI.ACTN_SET_GATE_POS
+            if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("close_cover for cover: %s. model: %s", self.entity_id, pos)
                 self.async_schedule_update_ha_state()
