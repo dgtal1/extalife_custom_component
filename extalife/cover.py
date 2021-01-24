@@ -8,6 +8,7 @@ from homeassistant.components.cover import (
     ATTR_POSITION,
     DEVICE_CLASS_SHUTTER,
     DEVICE_CLASS_GATE,
+    DEVICE_CLASS_DOOR,
     SUPPORT_OPEN,
     SUPPORT_CLOSE,
     SUPPORT_SET_POSITION,
@@ -21,6 +22,10 @@ from .helpers.const import DOMAIN, OPTIONS_COVER_INVERTED_CONTROL
 from .helpers.core import Core
 from .pyextalife import ExtaLifeAPI, MODEL_ROB01, MODEL_ROB21, DEVICE_MAP_TYPE_TO_MODEL, DEVICE_ARR_COVER, DEVICE_ARR_SENS_GATE_CONTROLLER
 
+GATE_CHN_TYPE_GATE = 0
+GATE_CHN_TYPE_TILT_GATE = 1
+GATE_CHN_TYPE_WICKET = 2
+GATE_CHN_TYPE_MONO = 3
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +55,14 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     @property
     def device_class(self):
         dev_type = self.channel_data.get("type")
-        return DEVICE_CLASS_SHUTTER if dev_type in DEVICE_ARR_COVER else DEVICE_CLASS_GATE 
+        chn_type = self.channel_data.get("channel_type")
+        if dev_type in DEVICE_ARR_COVER:
+            return DEVICE_CLASS_SHUTTER
+        elif chn_type == GATE_CHN_TYPE_WICKET:
+            return DEVICE_CLASS_DOOR
+        else:
+            return DEVICE_CLASS_GATE
+    
 
     @property
     def supported_features(self):
