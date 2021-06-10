@@ -22,6 +22,10 @@ from .helpers.const import DOMAIN, OPTIONS_COVER_INVERTED_CONTROL
 from .helpers.core import Core
 from .pyextalife import ExtaLifeAPI, MODEL_ROB01, MODEL_ROB21, DEVICE_MAP_TYPE_TO_MODEL, DEVICE_ARR_COVER, DEVICE_ARR_SENS_GATE_CONTROLLER
 
+GATE_CHN_TYPE_GATE = 0
+GATE_CHN_TYPE_TILT_GATE = 1
+GATE_CHN_TYPE_WICKET = 2
+GATE_CHN_TYPE_MONO = 3
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,15 +55,15 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     @property
     def device_class(self):
         dev_type = self.channel_data.get("type")
-        channel_type = self.channel_data.get("channel_type")
-        if dev_type in DEVICE_ARR_COVER: 
+        chn_type = self.channel_data.get("channel_type")
+        if dev_type in DEVICE_ARR_COVER:
             return DEVICE_CLASS_SHUTTER
+        elif chn_type == GATE_CHN_TYPE_WICKET:
+            return DEVICE_CLASS_DOOR
         else:
-            if channel_type == 2:
-                return DEVICE_CLASS_DOOR
-            else:
-                return DEVICE_CLASS_GATE
-                
+            return DEVICE_CLASS_GATE
+    
+
     @property
     def supported_features(self):
         dev_type = self.channel_data.get("type")
@@ -127,12 +131,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         if self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR:
             pos = 100-pos
         if not self.is_exta_free:            
-            action = ExtaLifeAPI.ACTN_SET_POS 
-            if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR:
-                action = ExtaLifeAPI.ACTN_SET_POS
-            else:
-                action = ExtaLifeAPI.ACTN_SET_GATE_POS
-            
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
             if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("open_cover for cover: %s. model: %s", self.entity_id, pos)
@@ -148,11 +147,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         if self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR:
             pos = 100-pos
         if not self.is_exta_free:
-            if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR:
-                action = ExtaLifeAPI.ACTN_SET_POS
-            else:
-                action = ExtaLifeAPI.ACTN_SET_GATE_POS
-            
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
             if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("close_cover for cover: %s. model: %s", self.entity_id, pos)
@@ -180,3 +175,4 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
 
             # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()
+
