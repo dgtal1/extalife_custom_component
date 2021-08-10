@@ -127,7 +127,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
         data = self.channel_data
-        pos  = ExtaLifeCover.POS_CLOSED if self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR else  ExtaLifeCover.POS_OPEN  #ROB-21 to open 'pos' must be different from 0
+        pos  = 1 if self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR else  ExtaLifeCover.POS_OPEN  #ROB-21 to open 'pos' must be different from 0
         if not self.is_exta_free:            
             action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
             if await self.async_action(action, value=pos):
