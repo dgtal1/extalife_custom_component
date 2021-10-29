@@ -27,7 +27,7 @@ SCHEMA_TEST_BUTTON = vol.Schema(
     {
         vol.Required(CONF_ENTITY_ID): cv.entity_id,
         vol.Required('button'): str,
-        vol.Required('channel_id'): str,
+        vol.Exclusive('channel_id', 'serial'): str,
         vol.Required('event'): str,
     }
 )
@@ -88,13 +88,17 @@ class ExtaLifeServices():
         button = call.data.get('button')
         entity_id = call.data.get(CONF_ENTITY_ID)
         channel_id = call.data.get('channel_id')
+        serial = call.data.get('serial')
         event = call.data.get('event')
 
         data = {'button': button}
         core = self._get_core(entity_id)
         entry_id = None
 
-        signal = PseudoPlatform.get_notif_upd_signal(channel_id)
+        if channel_id:
+            signal = PseudoPlatform.get_notif_upd_signal(channel_id)
+        else:
+            signal = PseudoPlatform.get_ext_notif_upd_signal(serial)
 
         num = 0
         def click():
