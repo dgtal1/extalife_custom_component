@@ -34,6 +34,7 @@ class PseudoPlatform():
         self._serial = channel_data.get("serial")
 
         self._signal_data_notif_remove_callback = None
+        self._signal_ext_data_notif_remove_callback = None
 
         # HA device id
         self._device : Device = None
