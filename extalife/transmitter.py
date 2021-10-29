@@ -70,6 +70,11 @@ class ExtaLifeTransmitter(PseudoPlatform):
             self.get_notif_upd_signal(self.id),
             self._sync_state_notif_update_callback,
         )
+        
+        self._signal_data_notif_remove_callback = core.async_signal_register(
+            self.get_ext_notif_upd_signal(self.serial),
+            self._sync_state_notif_update_callback,
+        )
 
 
     async def async_will_remove_from_hass(self) -> None:

@@ -31,6 +31,7 @@ class PseudoPlatform():
         self._config_entry = config_entry
         self._channel_data = channel_data.get("data")
         self._id = channel_data.get("id")
+        self._serial = channel_data.get("serial")
 
         self._signal_data_notif_remove_callback = None
 
@@ -45,6 +46,10 @@ class PseudoPlatform():
     @property
     def id(self):
         return self._id
+
+    @property
+    def serial(self):
+        return self._serial
 
     @property
     def device_type(self):
@@ -78,6 +83,10 @@ class PseudoPlatform():
     @staticmethod
     def get_notif_upd_signal(ch_id):
         return f"{SIGNAL_NOTIF_STATE_UPDATED}_{ch_id}"
+
+    @staticmethod
+    def get_ext_notif_upd_signal(serial):
+        return f"{SIGNAL_NOTIF_STATE_UPDATED}_{serial}"
 
     async def async_added_to_hass(self):
         pass
