@@ -1,6 +1,6 @@
 <img src="https://github.com/home-assistant/assets/blob/master/logo/logo.png" width="200px"/>
 
-[![ExtaLife Logo](https://extalife.pl/wp-content/themes/wi/images/logo.png)](https://www.forumextalife.pl/) 
+[![ExtaLife Logo](https://yt3.ggpht.com/ytc/AKedOLRdji2oMcII8lorhHubp4V0mptIxdYMYJf25crN=s176-c-k-c0x00ffffff-no-rj)](https://www.forumextalife.pl/) 
 
 ZAMEL Exta Life integration with Home Assistant based on custom component.
 ### Supported devices
@@ -12,7 +12,7 @@ ZAMEL Exta Life integration with Home Assistant based on custom component.
 * Heating controller: RGT-01, GKN-01
 * Sensors: RCT-21, RCT-22, RNK-21&RNK-22 built-in temperature sensor, flood sensor RCZ-21, motion sensor RCR-21, window sensor RCK-21, multisensor RCM-21, 3-phase energy meter MEM-21
 
-### Exta Free supported devices:
+### Exta Free supported devices (via EFC-01 controller):
 * Switches: ROP-01, ROP-02, ROP-05, ROP-06, ROP-07, ROM-01, ROM-10
 * Dimmers: RDP-01, RDP-02, RDP-11
 * Smart sockets: RWG-01
