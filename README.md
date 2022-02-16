@@ -26,4 +26,4 @@ The integration supports Integration Options - search for it on the Exta Life in
 
 Discussion, news and many more on https://www.forumextalife.pl/
 
-
+<a href="https://buycoffee.to/dgtal1" target="_blank"><img src="https://buycoffee.to/btn/buycoffeeto-btn-primary.svg" style="width: 159px" alt="But me a coffee with buycoffee.to"></a>
