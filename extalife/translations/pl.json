@@ -46,7 +46,7 @@
       "cover": {
         "description": "Ustawienia dla rolet",
         "data": {
-          "inverted_control": "Odróć sterowanie roletami w GUI Home Assistant (suwak w pozycji 100 oznacza roletę zamkniętą), aby przypominało sterowanie z aplikacji Exta Life"
+          "inverted_control": "Odwróć sterowanie roletami w GUI Home Assistant (suwak w pozycji 100 oznacza roletę zamkniętą), aby przypominało sterowanie z aplikacji Exta Life"
         }
       }
     }

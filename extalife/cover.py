@@ -85,7 +85,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         # ARROW DOWN - close cover
         # THIS CANNOT BE CHANGED AS IT'S HARDCODED IN HA GUI
 
-        if self.is_exta_free or self.device_class == DEVICE_CLASS_GATE:
+        if self.is_exta_free or self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR:
             return
 
         val = self.channel_data.get("value")
@@ -127,10 +127,9 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
         data = self.channel_data
-        pos  = ExtaLifeCover.POS_OPEN
-
+        pos  = 1 if self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR else  ExtaLifeCover.POS_OPEN  #ROB-21 to open 'pos' must be different from 0
         if not self.is_exta_free:            
-            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE else ExtaLifeAPI.ACTN_SET_GATE_POS
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
             if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("open_cover for cover: %s. model: %s", self.entity_id, pos)
@@ -143,9 +142,8 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         """Close the cover."""
         data = self.channel_data
         pos = ExtaLifeCover.POS_CLOSED
-
         if not self.is_exta_free:
-            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE else ExtaLifeAPI.ACTN_SET_GATE_POS
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
             if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("close_cover for cover: %s. model: %s", self.entity_id, pos)
@@ -173,3 +171,4 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
 
             # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()
+
