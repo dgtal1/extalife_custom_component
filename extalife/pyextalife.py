@@ -224,6 +224,7 @@ class ExtaLifeAPI:
     ACTN_SET_BRI = "SET_BRIGHTNESS"
     ACTN_SET_RGB = "SET_COLOR"
     ACTN_SET_POS = "SET_POSITION"
+    ACTN_SET_GATE_POS = "SET_GATE_POSITION"
     ACTN_SET_TMP = "SET_TEMPERATURE"
     ACTN_STOP = "STOP"
     ACTN_OPEN = "UP"
@@ -534,6 +535,7 @@ class ExtaLifeAPI:
             ExtaLifeAPI.ACTN_CLOSE: 0,
             ExtaLifeAPI.ACTN_STOP: 2,
             ExtaLifeAPI.ACTN_SET_POS: None,
+            ExtaLifeAPI.ACTN_SET_GATE_POS: 1,
             ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO: 0,
             ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL: 1,
             ExtaLifeAPI.ACTN_SET_TMP: 1,

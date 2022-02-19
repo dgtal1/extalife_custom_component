@@ -7,6 +7,8 @@ from homeassistant.components.cover import (
     CoverEntity,
     ATTR_POSITION,
     DEVICE_CLASS_SHUTTER,
+    DEVICE_CLASS_GATE,
+    DEVICE_CLASS_DOOR,
     SUPPORT_OPEN,
     SUPPORT_CLOSE,
     SUPPORT_SET_POSITION,
@@ -20,6 +22,10 @@ from .helpers.const import DOMAIN, OPTIONS_COVER_INVERTED_CONTROL
 from .helpers.core import Core
 from .pyextalife import ExtaLifeAPI, MODEL_ROB01, MODEL_ROB21, DEVICE_MAP_TYPE_TO_MODEL, DEVICE_ARR_COVER, DEVICE_ARR_SENS_GATE_CONTROLLER
 
+GATE_CHN_TYPE_GATE = 0
+GATE_CHN_TYPE_TILT_GATE = 1
+GATE_CHN_TYPE_WICKET = 2
+GATE_CHN_TYPE_MONO = 3
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +54,15 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_SHUTTER
+        dev_type = self.channel_data.get("type")
+        chn_type = self.channel_data.get("channel_type")
+        if dev_type in DEVICE_ARR_COVER:
+            return DEVICE_CLASS_SHUTTER
+        elif chn_type == GATE_CHN_TYPE_WICKET:
+            return DEVICE_CLASS_DOOR
+        else:
+            return DEVICE_CLASS_GATE
+    
 
     @property
     def supported_features(self):
@@ -71,7 +85,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         # ARROW DOWN - close cover
         # THIS CANNOT BE CHANGED AS IT'S HARDCODED IN HA GUI
 
-        if self.is_exta_free:
+        if self.is_exta_free or self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR:
             return
 
         val = self.channel_data.get("value")
@@ -99,23 +113,27 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     def is_closed(self):
         """Return if the cover is closed (affects roller icon and entity status)."""
         position = self.channel_data.get("value")
-
-        if position is None:
-            return None
-        pos = ExtaLifeCover.POS_CLOSED
-        _LOGGER.debug("is_closed for cover: %s. model: %s, returned to HA: %s", self.entity_id, position, position == pos)
-        return position == pos
-
+        gate_state = self.channel_data.get("channel_state")
+        
+        if position is not None:
+            pos = ExtaLifeCover.POS_CLOSED
+            _LOGGER.debug("is_closed for cover: %s. model: %s, returned to HA: %s", self.entity_id, position, position == pos)
+            return position == pos
+        
+        if gate_state is not None:
+            return gate_state == 3
+        return None
+    
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
         data = self.channel_data
-        pos  = ExtaLifeCover.POS_OPEN
-
-        if not self.is_exta_free:
-            if await self.async_action(ExtaLifeAPI.ACTN_SET_POS, value=pos):
+        pos  = 1 if self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR else  ExtaLifeCover.POS_OPEN  #ROB-21 to open 'pos' must be different from 0
+        if not self.is_exta_free:            
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
+            if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("open_cover for cover: %s. model: %s", self.entity_id, pos)
-                self.async_schedule_update_ha_state()
+                self.async_schedule_update_ha_state()               
         else:
             if await self.async_action(ExtaLifeAPI.ACTN_EXFREE_UP_PRESS) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_UP_RELEASE):
                 self.async_schedule_update_ha_state()
@@ -124,9 +142,9 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         """Close the cover."""
         data = self.channel_data
         pos = ExtaLifeCover.POS_CLOSED
-
         if not self.is_exta_free:
-            if await self.async_action(ExtaLifeAPI.ACTN_SET_POS, value=pos):
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
+            if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("close_cover for cover: %s. model: %s", self.entity_id, pos)
                 self.async_schedule_update_ha_state()
@@ -143,11 +161,14 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     def on_state_notification(self, data):
         """ React on state notification from controller """
         ch_data = self.channel_data.copy()
-        ch_data["value"] = data.get("value")
-
+        if ch_data.get("value") is not None:
+            ch_data["value"] = data.get("value")
+        if ch_data.get("channel_state") is not None:
+            ch_data["channel_state"] = data.get("channel_state")
         # update only if notification data contains new status; prevent HA event bus overloading
         if ch_data != self.channel_data:
             self.channel_data.update(ch_data)
 
             # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()
+
