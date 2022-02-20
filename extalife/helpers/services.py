@@ -7,66 +7,88 @@ import homeassistant.helpers.entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import HomeAssistantType
 from .const import DOMAIN
-from ..pyextalife import ExtaLifeAPI
 from .typing import CoreType
 
 # services
 SVC_RESTART = "restart"  # restart controller
-SVC_REFRESH_STATE = "refresh_state"  # execute status refresh, fetch new status from controller
+SVC_REFRESH_STATE = (
+    "refresh_state"  # execute status refresh, fetch new status from controller
+)
+SVC_CONNECT = "connect"
+SVC_DISCONNECT = "disconnect"
+
 
 _LOGGER = logging.getLogger(__name__)
 
-SCHEMA_BASE = vol.Schema(
-    {
-        vol.Required(CONF_ENTITY_ID): cv.entity_id
-    }
-)
-SCHEMA_REFRESH_STATE = SCHEMA_RESTART = SCHEMA_TEST_BUTTON = SCHEMA_BASE
+SCHEMA_BASE = vol.Schema({vol.Required(CONF_ENTITY_ID): cv.entity_id})
+SCHEMA_REFRESH_STATE = (
+    SCHEMA_RESTART
+) = SCHEMA_TEST_BUTTON = SCHEMA_CONNECT = SCHEMA_DISCONNECT = SCHEMA_BASE
 
 SCHEMA_TEST_BUTTON = vol.Schema(
     {
         vol.Required(CONF_ENTITY_ID): cv.entity_id,
-        vol.Required('button'): str,
-        vol.Required('channel_id'): str,
-        vol.Required('event'): str,
+        vol.Required("button"): str,
+        vol.Required("channel_id"): str,
+        vol.Required("event"): str,
     }
 )
 
-class ExtaLifeServices():
-    """ handle Exta Life services """
+
+class ExtaLifeServices:
+    """handle Exta Life services"""
 
     def __init__(self, hass: HomeAssistantType):
         self._hass = hass
         self._services = []
 
     def _get_core(self, entity_id: str) -> CoreType:
-        """ Resolve the Core helper class """
+        """Resolve the Core helper class"""
         from .core import Core
+
         return Core.get(self._get_entry_id(entity_id))
 
     def _get_entry_id(self, entity_id: str):
-        """ Resolve ConfigEntry.entry_id for entity_id """
-        registry = asyncio.run_coroutine_threadsafe(er.async_get_registry(self._hass), self._hass.loop).result()
+        """Resolve ConfigEntry.entry_id for entity_id"""
+        registry = asyncio.run_coroutine_threadsafe(
+            er.async_get_registry(self._hass), self._hass.loop
+        ).result()
         return registry.async_get(entity_id).config_entry_id
 
     async def async_register_services(self):
-        """ register all Exta Life integration services """
-        self._hass.services.async_register(DOMAIN, SVC_RESTART, self._handle_restart, SCHEMA_RESTART)
+        """register all Exta Life integration services"""
+        self._hass.services.async_register(
+            DOMAIN, SVC_RESTART, self._handle_restart, SCHEMA_RESTART
+        )
         self._services.append(SVC_RESTART)
 
-        self._hass.services.async_register(DOMAIN, SVC_REFRESH_STATE, self._handle_refresh_state, SCHEMA_REFRESH_STATE)
+        self._hass.services.async_register(
+            DOMAIN, SVC_REFRESH_STATE, self._handle_refresh_state, SCHEMA_REFRESH_STATE
+        )
         self._services.append(SVC_REFRESH_STATE)
 
-        self._hass.services.async_register(DOMAIN, 'test_button', self._handle_test_button, SCHEMA_TEST_BUTTON)
-        self._services.append('test_button')
+        self._hass.services.async_register(
+            DOMAIN, SVC_CONNECT, self._handle_connect, SCHEMA_CONNECT
+        )
+        self._services.append(SVC_CONNECT)
+
+        self._hass.services.async_register(
+            DOMAIN, SVC_DISCONNECT, self._handle_disconnect, SCHEMA_DISCONNECT
+        )
+        self._services.append(SVC_DISCONNECT)
+
+        self._hass.services.async_register(
+            DOMAIN, "test_button", self._handle_test_button, SCHEMA_TEST_BUTTON
+        )
+        self._services.append("test_button")
 
     async def async_unregister_services(self):
-        """ Unregister all Exta Life integration services """
+        """Unregister all Exta Life integration services"""
         for service in self._services:
             self._hass.services.async_remove(DOMAIN, service)
 
     def _handle_restart(self, call):
-        """ service: extalife.restart """
+        """service: extalife.restart"""
         entity_id = call.data.get(CONF_ENTITY_ID)
 
         core = self._get_core(entity_id)
@@ -74,63 +96,74 @@ class ExtaLifeServices():
         asyncio.run_coroutine_threadsafe(core.api.async_restart(), self._hass.loop)
 
     def _handle_refresh_state(self, call):
-        """ service: extalife.refresh_state """
+        """service: extalife.refresh_state"""
         entity_id = call.data.get(CONF_ENTITY_ID)
 
         core = self._get_core(entity_id)
-        asyncio.run_coroutine_threadsafe(core.data_manager.async_execute_status_polling(), self._hass.loop)
-        #  core.data_manager.async_execute_status_polling
+        asyncio.run_coroutine_threadsafe(
+            core.data_manager.async_execute_status_polling(), self._hass.loop
+        )
+
+    def _handle_connect(self, call):
+        """service: extalife.connect"""
+        entity_id = call.data.get(CONF_ENTITY_ID)
+
+        core = self._get_core(entity_id)
+        asyncio.run_coroutine_threadsafe(core.connect_resume(), self._hass.loop)
+
+    def _handle_disconnect(self, call):
+        """service: extalife.disconnect"""
+        entity_id = call.data.get(CONF_ENTITY_ID)
+
+        core = self._get_core(entity_id)
+        asyncio.run_coroutine_threadsafe(core.disconnect_suspend(), self._hass.loop)
 
     def _handle_test_button(self, call):
         from .common import PseudoPlatform
-        from .core import Core
 
-        button = call.data.get('button')
+        button = call.data.get("button")
         entity_id = call.data.get(CONF_ENTITY_ID)
-        channel_id = call.data.get('channel_id')
-        event = call.data.get('event')
+        channel_id = call.data.get("channel_id")
+        event = call.data.get("event")
 
-        data = {'button': button}
+        data = {"button": button}
         core = self._get_core(entity_id)
-        entry_id = None
 
         signal = PseudoPlatform.get_notif_upd_signal(channel_id)
 
         num = 0
+
         def click():
             nonlocal num
             seq = 1
             num += 1
-            data = {'button': button, 'click': num, 'sequence': seq}
-            data['state'] = 1
+            data = {"button": button, "click": num, "sequence": seq}
+            data["state"] = 1
             core.async_signal_send_sync(signal, data)
 
             data = data.copy()
             seq += 1
-            data['state'] = 0
-            data['sequence'] = seq
+            data["state"] = 0
+            data["sequence"] = seq
 
             core.async_signal_send_sync(signal, data)
 
-        if event == 'triple':
+        if event == "triple":
             click()
             click()
             click()
 
-        elif event == 'double':
+        elif event == "double":
             click()
             click()
 
-        elif event == 'single':
+        elif event == "single":
             click()
 
-        elif event == 'down':
-            data['state'] = 1
+        elif event == "down":
+            data["state"] = 1
             core.async_signal_send_sync(signal, data)
 
-        elif event == 'up':
-            data['state'] = 0
+        elif event == "up":
+            data["state"] = 0
             core.async_signal_send_sync(signal, data)
-
-
-
