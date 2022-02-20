@@ -1,18 +1,14 @@
 """Support for Exta Life binary sensor devices e.g. leakage sensor, door/window open sensor"""
 import logging
 from pprint import pformat
-from homeassistant.components.binary_sensor import BinarySensorEntity, DOMAIN as DOMAIN_BINARY_SENSOR
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+    DOMAIN as DOMAIN_BINARY_SENSOR,
+)
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    DEVICE_CLASS_HUMIDITY,
-    DEVICE_CLASS_ILLUMINANCE,
-    DEVICE_CLASS_TEMPERATURE,
-    TEMP_CELSIUS,
-)
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN
 from .helpers.core import Core
 from .pyextalife import (
     DEVICE_ARR_SENS_WATER,
@@ -24,19 +20,25 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """"setup via configuration.yaml not supported anymore"""
+    """ "setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up Exta Life binary sensors based on existing config."""
 
     core = Core.get(config_entry.entry_id)
     channels = core.get_channels(DOMAIN_BINARY_SENSOR)
 
     _LOGGER.debug("Discovery: %s", pformat(channels))
-    async_add_entities([ExtaLifeBinarySensor(device, config_entry) for device in channels])
+    async_add_entities(
+        [ExtaLifeBinarySensor(device, config_entry) for device in channels]
+    )
 
     core.pop_channels(DOMAIN_BINARY_SENSOR)
+
 
 class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
     """Representation of an ExtaLife binary sensors"""
@@ -83,15 +85,14 @@ class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
         )
         return value
 
-
     @property
     def device_class(self):
         return self._dev_class
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device specific state attributes."""
-        attr = super().device_state_attributes
+        attr = super().extra_state_attributes
         data = self.channel_data
         # general sensor attributes
         if data.get("sync_time") is not None:
@@ -109,7 +110,7 @@ class ExtaLifeBinarySensor(ExtaLifeChannel, BinarySensorEntity):
         return attr
 
     def on_state_notification(self, data):
-        """ React on state notification from controller """
+        """React on state notification from controller"""
         state = data.get("state")
         ch_data = self.channel_data.copy()
 
