@@ -27,7 +27,7 @@ OPTIONS_COVER_INV_CONTROL = 'inverted_control'
 # signals
 SIGNAL_DATA_UPDATED = f"{DOMAIN}_data_updated"
 SIGNAL_NOTIF_STATE_UPDATED = f"{DOMAIN}_notif_state_updated"
-
+SIGNAL_CONN_STATE_CHANGE = f"{DOMAIN}_connection_state_change"
 
 # transmitters
 DOMAIN_TRANSMITTER = "transmitter"
