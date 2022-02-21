@@ -5,16 +5,33 @@ import logging
 from pprint import pformat
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.light import (LightEntity, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_WHITE_VALUE,
-     SUPPORT_EFFECT, ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_WHITE_VALUE, ATTR_EFFECT, DOMAIN as DOMAIN_LIGHT)
+from homeassistant.components.light import (
+    LightEntity,
+    SUPPORT_BRIGHTNESS,
+    SUPPORT_COLOR,
+    SUPPORT_WHITE_VALUE,
+    SUPPORT_EFFECT,
+    ATTR_BRIGHTNESS,
+    ATTR_HS_COLOR,
+    ATTR_WHITE_VALUE,
+    ATTR_EFFECT,
+    DOMAIN as DOMAIN_LIGHT,
+)
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN
 from .helpers.core import Core
-from .pyextalife import ExtaLifeAPI, DEVICE_ARR_ALL_LIGHT, DEVICE_ARR_LIGHT_RGB, DEVICE_ARR_LIGHT_RGBW, DEVICE_ARR_LIGHT_EFFECT, DEVICE_ARR_EXTA_FREE_RGB
+from .pyextalife import (
+    ExtaLifeAPI,
+    DEVICE_ARR_ALL_LIGHT,
+    DEVICE_ARR_LIGHT_RGB,
+    DEVICE_ARR_LIGHT_RGBW,
+    DEVICE_ARR_LIGHT_EFFECT,
+    DEVICE_ARR_EXTA_FREE_RGB,
+)
 
 import homeassistant.util.color as color_util
+
 _LOGGER = logging.getLogger(__name__)
 
 EFFECT_1 = "Program 1"
@@ -28,7 +45,19 @@ EFFECT_8 = "Program 8"
 EFFECT_9 = "Program 9"
 EFFECT_10 = "Program 10"
 EFFECT_FLOAT = "Floating"
-EFFECT_LIST = [EFFECT_1, EFFECT_2, EFFECT_3, EFFECT_4, EFFECT_5, EFFECT_6, EFFECT_7, EFFECT_8, EFFECT_9, EFFECT_10, EFFECT_FLOAT]
+EFFECT_LIST = [
+    EFFECT_1,
+    EFFECT_2,
+    EFFECT_3,
+    EFFECT_4,
+    EFFECT_5,
+    EFFECT_6,
+    EFFECT_7,
+    EFFECT_8,
+    EFFECT_9,
+    EFFECT_10,
+    EFFECT_FLOAT,
+]
 EFFECT_LIST_SLR = EFFECT_LIST
 
 MAP_MODE_VAL_EFFECT = {
@@ -58,6 +87,7 @@ MAP_EFFECT_MODE_VAL = {
     EFFECT_10: 10,
 }
 
+
 def scaleto255(value):
     """Scale the input value from 0-100 to 0-255."""
     return max(0, min(255, ((value * 255.0) / 100.0)))
@@ -70,24 +100,27 @@ def scaleto100(value):
         return 1
     return int(max(0, min(100, ((value * 100.0) / 255.0))))
 
+
 def modevaltohex(mode_val):
-    """ convert mode_val value that can be either xeh string or int to a hex string """
+    """convert mode_val value that can be either xeh string or int to a hex string"""
     if isinstance(mode_val, int):
         return (hex(mode_val)[2:]).upper()
     if isinstance(mode_val, str):
         return mode_val
     return None
 
+
 def modevaltoint(mode_val):
-    """ convert mode_val value that can be either xeh string or int to int """
+    """convert mode_val value that can be either xeh string or int to int"""
     if isinstance(mode_val, str):
         return int(mode_val, 16)
     if isinstance(mode_val, int):
         return mode_val
     return None
 
+
 def modeval_upd(old, new):
-    """ Update mode_val contextually. Convert to type of the old value and update"""
+    """Update mode_val contextually. Convert to type of the old value and update"""
     if isinstance(old, int):
         if isinstance(new, int):
             return new
@@ -100,11 +133,15 @@ def modeval_upd(old, new):
 
     return None
 
+
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up an Exta Life light based on existing config."""
 
     core = Core.get(config_entry.entry_id)
@@ -114,6 +151,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
     async_add_entities([ExtaLifeLight(device, config_entry) for device in channels])
 
     core.pop_channels(DOMAIN_LIGHT)
+
 
 class ExtaLifeLight(ExtaLifeChannel, LightEntity):
     """Representation of an ExtaLife light-contorlling device."""
@@ -137,7 +175,9 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
 
         if dev_type in DEVICE_ARR_LIGHT_RGBW:
             self._supported_flags |= SUPPORT_COLOR | SUPPORT_WHITE_VALUE
-        elif dev_type in DEVICE_ARR_LIGHT_RGB: # do not add Exta Free as RDP-11 support in controller is limited to on/off only
+        elif (
+            dev_type in DEVICE_ARR_LIGHT_RGB
+        ):  # do not add Exta Free as RDP-11 support in controller is limited to on/off only
             self._supported_flags |= SUPPORT_COLOR
 
         if dev_type in DEVICE_ARR_LIGHT_EFFECT:
@@ -165,12 +205,17 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
         effect = kwargs.get(ATTR_EFFECT)
         _LOGGER.debug("kwargs: %s", kwargs)
         _LOGGER.debug("'mode_val' value: %s", mode_val)
-        _LOGGER.debug("turn_on for entity: %s(%s). mode_val_int: %s", self.entity_id, self.channel_id, mode_val_int)
+        _LOGGER.debug(
+            "turn_on for entity: %s(%s). mode_val_int: %s",
+            self.entity_id,
+            self.channel_id,
+            mode_val_int,
+        )
 
         # WARNING: Exta LIfe 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
         if self._supported_flags & SUPPORT_WHITE_VALUE and effect is None:
             if kwargs.get(ATTR_WHITE_VALUE) is None:
-                w = mode_val_int & 255    # default
+                w = mode_val_int & 255  # default
             else:
                 w = int(kwargs.get(ATTR_WHITE_VALUE)) & 255
 
@@ -182,16 +227,24 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
                 rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
                 rgb = (int(rgb[0]) << 16) | (int(rgb[1]) << 8) | (int(rgb[2]))
 
-        if self._supported_flags & SUPPORT_WHITE_VALUE and self._supported_flags & SUPPORT_COLOR and effect is None:
+        if (
+            self._supported_flags & SUPPORT_WHITE_VALUE
+            and self._supported_flags & SUPPORT_COLOR
+            and effect is None
+        ):
             # Exta Life colors in SLR22 are 4 bytes: RGBW
             _LOGGER.debug("RGB value: %s. W value: %s", rgb, w)
-            rgbw = (rgb << 8) | w       # merge RGB & W
+            rgbw = (rgb << 8) | w  # merge RGB & W
             params.update({"mode_val": rgbw})
-            params.update({"mode": 1})  # mode - still light or predefined programs; set it as still light
+            params.update(
+                {"mode": 1}
+            )  # mode - still light or predefined programs; set it as still light
 
         if effect is not None:
-            params.update({"mode": 2}) # mode - turn on effect
-            params.update({"mode_val": MAP_EFFECT_MODE_VAL[effect]})  # mode - one of effects
+            params.update({"mode": 2})  # mode - turn on effect
+            params.update(
+                {"mode_val": MAP_EFFECT_MODE_VAL[effect]}
+            )  # mode - one of effects
 
         if not self.is_exta_free:
             if await self.async_action(ExtaLifeAPI.ACTN_TURN_ON, **params):
@@ -199,11 +252,17 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
                 data["power"] = 1
                 mode_val_new = params.get("mode_val")
                 if mode_val_new is not None:
-                    params["mode_val"] = modeval_upd(mode_val, mode_val_new)  # convert new value to the format of the old value from channel_data
+                    params["mode_val"] = modeval_upd(
+                        mode_val, mode_val_new
+                    )  # convert new value to the format of the old value from channel_data
                 data.update(params)
                 self.async_schedule_update_ha_state()
         else:
-            if await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_ON_PRESS, **params) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_ON_RELEASE, **params):
+            if await self.async_action(
+                ExtaLifeAPI.ACTN_EXFREE_TURN_ON_PRESS, **params
+            ) and await self.async_action(
+                ExtaLifeAPI.ACTN_EXFREE_TURN_ON_RELEASE, **params
+            ):
                 self._assumed_on = True
                 self.schedule_update_ha_state()
 
@@ -227,7 +286,11 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
                 data["mode"] = mode
                 self.async_schedule_update_ha_state()
         else:
-            if await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_PRESS, **params) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_RELEASE, **params):
+            if await self.async_action(
+                ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_PRESS, **params
+            ) and await self.async_action(
+                ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_RELEASE, **params
+            ):
                 self._assumed_on = False
                 self.schedule_update_ha_state()
 
@@ -247,7 +310,7 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
 
     @property
     def brightness(self):
-        """ Device brightness """
+        """Device brightness"""
         data = self.channel_data
         # brightness is only supported for native Exta Life light-controlling devices
         if data.get("type") in DEVICE_ARR_ALL_LIGHT:
@@ -260,7 +323,7 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
 
     @property
     def hs_color(self):
-        """ Device colour setting """
+        """Device colour setting"""
         rgbw = modevaltoint(self.channel_data.get("mode_val"))
         rgb = rgbw >> 8
         r = rgb >> 16
@@ -290,7 +353,7 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
         return False
 
     def on_state_notification(self, data):
-        """ React on state notification from controller """
+        """React on state notification from controller"""
         state = data.get("state")
         ch_data = self.channel_data.copy()
 
@@ -306,5 +369,5 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
         if ch_data != self.channel_data:
             self.channel_data.update(ch_data)
 
-           # synchronize DataManager data with processed update & entity data
+            # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()
