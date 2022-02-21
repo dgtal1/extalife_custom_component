@@ -34,7 +34,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     """setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up Exta Life sensors based on existing config."""
 
     core = Core.get(config_entry.entry_id)
@@ -44,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
     async_add_entities([ExtaLifeSensor(device, config_entry) for device in channels])
 
     core.pop_channels(DOMAIN_SENSOR)
+
 
 class ExtaLifeSensor(ExtaLifeChannel):
     """Representation of Exta Life Sensors"""
@@ -98,7 +102,6 @@ class ExtaLifeSensor(ExtaLifeChannel):
             self._dev_class = DEVICE_CLASS_ENERGY
             self._unit = "kWh"
 
-
     def get_unique_id(self) -> str:
         """Override return a unique ID."""
         if not self._monitored_value:
@@ -112,7 +115,7 @@ class ExtaLifeSensor(ExtaLifeChannel):
         # multisensor?
         # state = self.channel_data.get(self._monitored_value)
 
-        #MEM-21
+        # MEM-21
         energy = self.channel_data.get("total_energy")
         state = energy / 100000 if energy else None
 
@@ -138,8 +141,8 @@ class ExtaLifeSensor(ExtaLifeChannel):
         return self._unit
 
     @property
-    def device_state_attributes(self):
-        attr = super().device_state_attributes
+    def extra_state_attributes(self):
+        attr = super().extra_state_attributes
         """Return device specific state attributes."""
         data = self.channel_data
         if data.get("sync_time") is not None:
@@ -158,7 +161,7 @@ class ExtaLifeSensor(ExtaLifeChannel):
             c = 0
             for phase in var:
                 c += 1
-                for k,v in phase.items():
+                for k, v in phase.items():
                     phase_variable = f"phase_{c}_{k}"
                     attr.update({phase_variable: v})
 
@@ -175,7 +178,7 @@ class ExtaLifeSensor(ExtaLifeChannel):
         return attr
 
     def on_state_notification(self, data):
-        """ React on state notification from controller """
+        """React on state notification from controller"""
 
         self.channel_data.update(data)
 
