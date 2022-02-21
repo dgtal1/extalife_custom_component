@@ -176,8 +176,8 @@ class Core:
         if self._controller_entity is not None:
             self._controller_entity.schedule_update_ha_state()
 
-        # notify subscribed entitied about connection state change
-        self.async_signal_send(SIGNAL_CONN_STATE_CHANGE, sync=True)
+        # notify subscribed entitied about connection state change (problems with non-thread safe operation)
+        # self.async_signal_send(SIGNAL_CONN_STATE_CHANGE, sync=True)
 
     def _on_disconnect_callback(self):
         """Execute actions on disconnection with controller"""
@@ -190,7 +190,7 @@ class Core:
             self._controller_entity.schedule_update_ha_state()
 
         # notify subscribed entitied about connection state change
-        self.async_signal_send(SIGNAL_CONN_STATE_CHANGE, sync=True)
+        # self.async_signal_send(SIGNAL_CONN_STATE_CHANGE, sync=True)
         # async_dispatcher_send(self.hass, SIGNAL_CONN_STATE_CHANGE) # that won't work (non-thread safe operation error)
 
         if self._is_disconnect_suspend:
