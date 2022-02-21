@@ -544,16 +544,16 @@ class ExtaLifeChannel(Entity):
             )
         )
 
-        self._on_remove_callbacks.append(
-            Core.get(self.config_entry.entry_id).async_signal_register(
-                SIGNAL_CONN_STATE_CHANGE, self._on_conn_state_callback
-            )
-        )
+        # self._on_remove_callbacks.append(
+        #     Core.get(self.config_entry.entry_id).async_signal_register(
+        #         SIGNAL_CONN_STATE_CHANGE, self._on_conn_state_callback
+        #     )
+        # )
 
     async def async_will_remove_from_hass(self) -> None:
         await super().async_will_remove_from_hass()
-        for callback in self._on_remove_callbacks:
-            callback()
+        for cb in self._on_remove_callbacks:
+            cb()
 
     async def async_update_callback(self):
         """Inform HA of state update from status poller"""
