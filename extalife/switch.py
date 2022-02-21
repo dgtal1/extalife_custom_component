@@ -7,17 +7,20 @@ from homeassistant.components.switch import SwitchEntity, DOMAIN as DOMAIN_SWITC
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN
 from .helpers.core import Core
 from .pyextalife import ExtaLifeAPI, MODEL_ROG21
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
     pass
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+):
     """Set up Exta Life switches based on existing config."""
 
     core = Core.get(config_entry.entry_id)
@@ -28,8 +31,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
 
     core.pop_channels(DOMAIN_SWITCH)
 
+
 class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
     """Representation of an ExtaLife Switch."""
+
     def __init__(self, channel_data, config_entry):
         super().__init__(channel_data, config_entry)
         self.channel_data = channel_data.get("data")
@@ -44,27 +49,37 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
         """Turn on the switch."""
         if not self.is_exta_free:
             if await self.async_action(ExtaLifeAPI.ACTN_TURN_ON):
-                field = "power" if self.channel_data.get("output_state") is None else "output_state"
+                field = (
+                    "power"
+                    if self.channel_data.get("output_state") is None
+                    else "output_state"
+                )
                 self.channel_data[field] = 1
                 self.async_schedule_update_ha_state()
         else:
-            if await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_ON_PRESS) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_ON_RELEASE):
+            if await self.async_action(
+                ExtaLifeAPI.ACTN_EXFREE_TURN_ON_PRESS
+            ) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_ON_RELEASE):
                 self._assumed_on = True
                 self.async_schedule_update_ha_state()
-
 
     async def async_turn_off(self, **kwargs):
         """Turn off the switch."""
         if not self.is_exta_free:
             if await self.async_action(ExtaLifeAPI.ACTN_TURN_OFF):
-                field = "power" if self.channel_data.get("output_state") is None else "output_state"
+                field = (
+                    "power"
+                    if self.channel_data.get("output_state") is None
+                    else "output_state"
+                )
                 self.channel_data[field] = 0
                 self.async_schedule_update_ha_state()
         else:
-            if await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_PRESS) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_RELEASE):
+            if await self.async_action(
+                ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_PRESS
+            ) and await self.async_action(ExtaLifeAPI.ACTN_EXFREE_TURN_OFF_RELEASE):
                 self._assumed_on = False
                 self.async_schedule_update_ha_state()
-
 
     @property
     def is_on(self):
@@ -72,7 +87,9 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
         if self.is_exta_free:
             return self._assumed_on
 
-        field = "power" if self.channel_data.get("output_state") is None else "output_state"
+        field = (
+            "power" if self.channel_data.get("output_state") is None else "output_state"
+        )
         state = self.channel_data.get(field)
 
         if state == 1 or state == True:
@@ -80,9 +97,9 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
         return False
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device specific state attributes."""
-        attr = super().device_state_attributes
+        attr = super().extra_state_attributes
         data = self.channel_data
 
         # ROG-21 measurement attributes
@@ -92,14 +109,14 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
                     "voltage": data.get("voltage") / 100,
                     "current": data.get("current") / 1000,
                     "active_power": data.get("active_power"),
-                    "energy_consumption": data.get("manual_energy") / 100000
+                    "energy_consumption": data.get("manual_energy") / 100000,
                 }
             )
 
         return attr
 
     def on_state_notification(self, data):
-        """ React on state notification from controller """
+        """React on state notification from controller"""
 
         state = data.get("state")
         ch_data = self.channel_data.copy()
@@ -115,5 +132,3 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
 
             # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()
-
- 
