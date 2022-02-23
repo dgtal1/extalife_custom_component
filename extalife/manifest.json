@@ -1,7 +1,7 @@
 {
   "domain": "extalife",
   "name": "Exta Life",
-  "version": "2.1.3alpha0",
+  "version": "2.1.3a0",
   "config_flow": true,
   "documentation": "https://www.forumextalife.pl/index.php/board,56.0.html",
   "requirements": [
