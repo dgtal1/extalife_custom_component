@@ -16,13 +16,15 @@ OPTIONS_GENERAL_DISABLE_NOT_RESPONDING = "disable_not_responding"
 OPTIONS_LIGHT_ICONS_LIST = "icons_list"
 OPTIONS_COVER_INVERTED_CONTROL = "inverted_control"
 
-CONF_OPTIONS = 'options'  # additional per-platform configuration
-OPTIONS_GENERAL = 'general'  # general settings
-OPTIONS_SWITCH = 'switch'         # additional switch configuration
-OPTIONS_LIGHT = 'light'           # additional light configuration
-OPTIONS_LIGHT_ICONS_LIST = 'icons_list'           # map switches as lights for these Exta Life icons
-OPTIONS_COVER = 'cover'           # additional cover configuration
-OPTIONS_COVER_INV_CONTROL = 'inverted_control'
+CONF_OPTIONS = "options"  # additional per-platform configuration
+OPTIONS_GENERAL = "general"  # general settings
+OPTIONS_SWITCH = "switch"  # additional switch configuration
+OPTIONS_LIGHT = "light"  # additional light configuration
+OPTIONS_LIGHT_ICONS_LIST = (
+    "icons_list"  # map switches as lights for these Exta Life icons
+)
+OPTIONS_COVER = "cover"  # additional cover configuration
+OPTIONS_COVER_INV_CONTROL = "inverted_control"
 
 # signals
 SIGNAL_DATA_UPDATED = f"{DOMAIN}_data_updated"
@@ -31,6 +33,30 @@ SIGNAL_NOTIF_STATE_UPDATED = f"{DOMAIN}_notif_state_updated"
 
 # transmitters
 DOMAIN_TRANSMITTER = "transmitter"
+
+# virtual sensors aren't attached to a channel, but to an entity
+DOMAIN_VIRTUAL_SENSOR = "virtual_sensor"
+DOMAIN_VIRTUAL_LIGHT_SENSOR = "virtual_light_sensor"
+DOMAIN_VIRTUAL_SWITCH_SENSOR = "virtual_switch_sensor"
+DOMAIN_VIRTUAL_COVER_SENSOR = "virtual_cover_sensor"
+DOMAIN_VIRTUAL_CLIMATE_SENSOR = "virtual_climate_sensor"
+DOMAIN_VIRTUAL_SENSORS = (
+    DOMAIN_VIRTUAL_SENSOR,
+    DOMAIN_VIRTUAL_CLIMATE_SENSOR,
+    DOMAIN_VIRTUAL_COVER_SENSOR,
+    DOMAIN_VIRTUAL_LIGHT_SENSOR,
+    DOMAIN_VIRTUAL_SWITCH_SENSOR,
+)
+
+# virtual sensor config dict attributes
+VIRT_SENSOR_PATH = "value_path"
+VIRT_SENSOR_DEV_CLS = "device_class"
+VIRT_SENSOR_UNIT = "unit"
+VIRT_SENSOR_FACTOR = "factor"
+VIRT_SENSOR_NAME_SUFFIX = "name_suffix"
+
+# virtual sensor channel data field
+VIRT_SENSOR_CHN_FIELD = "_virtual_sensor"
 
 # events and devices
 CONF_EXTALIFE_EVENT_UNIQUE_ID = "unique_id"

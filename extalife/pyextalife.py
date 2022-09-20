@@ -56,6 +56,47 @@ MODEL_P520 = "P-520"
 MODEL_P521L = "P-521L"
 MODEL_BULIK_DRS985 = "bulik DRS-985"
 
+class ExtaLifeDeviceModel():
+    RNK22	=	1
+    RNK22_TEMP_SENSOR	=	2
+    RNK24	=	3
+    RNK22_TEMP_SENSOR	=	4
+    P4572	=	5
+    P4574	=	6
+    P4578	=	7
+    P45736	=	8
+    LEDIX_P260	=	9
+    ROP21	=	10
+    ROP22	=	11
+    SRP22	=	12
+    RDP21	=	13
+    GKN01	=	14
+    ROP27	=	15
+    RGT01	=	16
+    RNM24	=	17
+    RNP21	=	18
+    RNP22	=	19
+    RCT21	=	20
+    RCT22	=	21
+    ROG21	=	22
+    ROM22	=	23
+    ROM24	=	24
+    SRM22	=	25
+    SLR21	=	26
+    SLR22	=	27
+    RCM21	=	28
+    MEM21	=	35
+    RCR21	=	41
+    RCZ21	=	42
+    SLM21	=	45
+    SLM22	=	46
+    RCK21	=	47
+    ROB21	=	48
+    P501	=	51
+    P520	=	52
+    P521L	=	53
+    BULIK_DRS985	=	238
+
 # Exta Free
 MODEL_ROP01 = "ROP-01"
 MODEL_ROP02 = "ROP-02"

@@ -4,11 +4,10 @@ from pprint import pformat
 # from homeassistant.components.extalife import ExtaLifeChannel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
-from homeassistant.components.climate import ClimateEntity, DOMAIN as DOMAIN_CLIMATE
+from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, DOMAIN as DOMAIN_CLIMATE
 from homeassistant.components.climate.const import (
     HVAC_MODE_AUTO,
     HVAC_MODE_HEAT,
-    SUPPORT_TARGET_TEMPERATURE,
     CURRENT_HVAC_IDLE,
     CURRENT_HVAC_HEAT,
 )
@@ -83,7 +82,7 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return SUPPORT_TARGET_TEMPERATURE
+        return ClimateEntityFeature.TARGET_TEMPERATURE
 
     @property
     def max_temp(self):
