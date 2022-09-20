@@ -1,10 +1,12 @@
 {
   "domain": "extalife",
   "name": "Exta Life",
-  "version": "2.1.4b0",
+  "version": "2.2b0",
   "config_flow": true,
   "documentation": "https://www.forumextalife.pl/index.php/board,56.0.html",
-  "requirements": ["getmac==0.8.2"],
+  "requirements": [
+    "getmac==0.8.2"
+  ],
   "dependencies": [],
   "codeowners": [
     "@dgtal1"
