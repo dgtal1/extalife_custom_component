@@ -245,10 +245,8 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
                 w = mode_val_int & 255  # default
 
         if self._supports_color and effect is None:
-            if ATTR_HS_COLOR in kwargs:
-                hs = kwargs[ATTR_HS_COLOR]  # should return a tuple (h, s)
-                rgb = color_util.color_hs_to_RGB(*hs)  # returns a tuple (R, G, B)
-                rgb = (int(rgb[0]) << 16) | (int(rgb[1]) << 8) | (int(rgb[2]))
+            if ATTR_RGBW_COLOR in kwargs:
+                rgb = (r << 16) | (g << 8) | b
             else:
                 rgb = mode_val_int >> 8  # default
 

@@ -356,24 +356,6 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
 
         return find_element(path, self.channel_data)
 
-        # value = None
-        # if path[0] == "?":
-        #     p = path[1:]
-        #     e1, e2 = p.split("]")
-        #     value = None
-        #     arr_el = None
-
-        #     arr_nm, idx = e1.split("[")
-        #     arr = self.channel_data.get(arr_nm)
-        #     arr_el = arr[int(idx)]
-
-        #     if arr_el:
-        #         value = arr_el.get(e2)
-        #         return value
-        # else:
-        #     return self.channel_data.get(path)
-
-
 class ExtaLifeSensor(ExtaLifeSensorBase):
     """Representation of Exta Life Sensors"""
 
@@ -424,7 +406,7 @@ class ExtaLifeSensor(ExtaLifeSensorBase):
                         attr.append(
                             {
                                 VIRT_SENSOR_DEV_CLS: dev_class,
-                                VIRT_SENSOR_PATH: f"phase[{phase.index(p)}]{k}",
+                                VIRT_SENSOR_PATH: f"phase[{phase.index(p)}].{k}",
                             }
                         )
 
