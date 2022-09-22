@@ -19,7 +19,7 @@ ZAMEL Exta Life integration with Home Assistant based on custom component.
 * Roller blind controllers: SRP-02, SRP-03, ROB-01
 
 **Note:** Certain switches are mapped into Home Asistant light entities depending on icon assigned to them. This is to support voice control by Google Assistant and others and because switches are mostly used for light control.
-### Configuration
+### Setup
 Make sure you copied the integration to `custom_components` folder in your `config` directory.
 The integration is setup from Home Assistant GUI (Integrations screen). Search for "Exta Life" on the list of possible integrations. If it's not visible - clear your browser chache and refresh page.
 The integration supports Integration Options - search for it on the Exta Life integration badge in Integrations GUI.
