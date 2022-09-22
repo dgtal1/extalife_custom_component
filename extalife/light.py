@@ -235,7 +235,7 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
 
         r = g = b = w = 0
         if ATTR_RGBW_COLOR in kwargs:
-            r, g, b, w = kwargs
+            r, g, b, w = kwargs[ATTR_RGBW_COLOR]
 
         # WARNING: Exta Life 'mode_val' from command 37 is a HEX STRING, but command 20 requires INT!!! 🤦‍♂️
         if self._supports_white_v and effect is None:
