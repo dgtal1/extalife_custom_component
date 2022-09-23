@@ -493,7 +493,8 @@ class ChannelDataManager:
             component_configs.setdefault(component_name, []).append(channel)
             entities += 1
 
-        _LOGGER.debug("Exta Life devices found during discovery: %s", entities)
+        # _LOGGER.debug("Exta Life devices found during discovery: %s", entities)
+        _LOGGER.debug("Exta Life devices found during discovery: %s, components: %s", entities, component_configs.keys())
 
         # Load discovered devices
 
@@ -510,9 +511,12 @@ class ChannelDataManager:
                 self.core.push_channels(component_name, channels)
 
                 # 'sync' call to synchronize channels' stack with platform setup
+                _LOGGER.debug("Before `async_forward_entry_setup` for component %s", component_name)
+
                 await self._hass.config_entries.async_forward_entry_setup(
                     self._config_entry, component_name
                 )
+                _LOGGER.debug("After `async_forward_entry_setup` for component %s", component_name)
                 # self._hass.async_create_task(
                 #     self._hass.config_entries.async_forward_entry_setup(
                 #         self._config_entry, component_name
