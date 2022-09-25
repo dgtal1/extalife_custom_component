@@ -289,7 +289,7 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
 
     @property
     def native_unit_of_measurement(self):
-        return self._config.unit_of_measurement
+        return self._config.native_unit_of_measurement
 
     @property
     def state_class(self) -> SensorStateClass:
@@ -375,7 +375,9 @@ class ExtaLifeSensor(ExtaLifeSensorBase):
         self._config = SENSOR_TYPES[dev_class]
 
         # create virtual, attribute sensors
-        for virtual in self.virtual_sensor_attributes:
+        virtual_sensors = self.virtual_sensor_attributes
+        _LOGGER.debug("Virtual sensors: %s", virtual_sensors)
+        for virtual in virtual_sensors:
             v_channel_data = channel_data
             v_channel_data.update({VIRT_SENSOR_CHN_FIELD: virtual})
             self.core.push_channels(
