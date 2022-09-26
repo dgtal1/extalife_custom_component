@@ -193,7 +193,7 @@ SENSOR_TYPES: dict[str, ExtaLifeSensorEntityConfig] = {
     ),
     SensorDeviceClass.HUMIDITY: ExtaLifeSensorEntityConfig(
         native_unit_of_measurement=PERCENTAGE,
-        device_class=SensorDeviceClass.ILLUMINANCE,
+        device_class=SensorDeviceClass.HUMIDITY,
         state_class=SensorStateClass.MEASUREMENT,
         factor=1,
     ),
