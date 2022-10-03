@@ -2,7 +2,6 @@
 from dataclasses import dataclass
 import logging
 from pprint import pformat
-from typing import Final
 
 from homeassistant.backports.enum import StrEnum
 
@@ -38,10 +37,7 @@ from .helpers.const import (
     DOMAIN_VIRTUAL_SENSOR,
     VIRT_SENSOR_CHN_FIELD,
     VIRT_SENSOR_DEV_CLS,
-    VIRT_SENSOR_FACTOR,
-    VIRT_SENSOR_NAME_SUFFIX,
     VIRT_SENSOR_PATH,
-    VIRT_SENSOR_UNIT,
 )
 from .pyextalife import (
     DEVICE_ARR_SENS_ENERGY_METER,
@@ -56,18 +52,31 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
-class ExtaLifeSensorEntityConfig(SensorEntityDescription):
+class ELSensorEntityDescription(SensorEntityDescription):
     """Sensor entity config description"""
 
     key: str = ""
     factor: float = 1  # value scaling factor to have a value in normalized units like Watt, Volt etc
     value_path: str = "value_1"  # path to the value field in channel_data
 
+class SensorEntityConfig():
+    """ This class MUST correspond to class ELSensorEntityDescription.
+    The task of this class is to have instance-based version of Entity Description/config,
+    that can be manipulated / overwritten by Virtual sensors setup"""
+    def __init__(self, descr: ELSensorEntityDescription) -> None:
+        self.key: str = descr.key
+        self.factor: float = descr.factor
+        self.value_path: str = descr.value_path
+
+        self.native_unit_of_measurement: str = descr.native_unit_of_measurement
+        self.device_class: str = descr.device_class
+        self.state_class: str = descr.state_class
+
 
 class ExtaSensorDeviceClass(StrEnum):
     """ExtaLife custom device classes"""
 
-    TOTAL_ENERGY = "total_energy"
+    #TOTAL_ENERGY = "total_energy"
     APPARENT_ENERGY = "apparent_energy"  # kVAh
     REACTIVE_ENERGY = "reactive_energy"  # kvarh
     PHASE_SHIFT = "phase_shift"
@@ -106,104 +115,105 @@ MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS = {
     "power_factor": SensorDeviceClass.POWER_FACTOR,
     "frequency": SensorDeviceClass.FREQUENCY,
     "phase_shift": ExtaSensorDeviceClass.PHASE_SHIFT,
-    "phase_energy": ExtaSensorDeviceClass.TOTAL_ENERGY,
+    "phase_energy": SensorDeviceClass.ENERGY,
     "apparent_energy": ExtaSensorDeviceClass.APPARENT_ENERGY,
-    "active_energy_solar": ExtaSensorDeviceClass.TOTAL_ENERGY,
+    "active_energy_solar": SensorDeviceClass.ENERGY,
     "reactive_energy_solar": ExtaSensorDeviceClass.REACTIVE_ENERGY,
 }
 
 
 # List of additional sensors which are created based on a property
 # The key is the property name
-SENSOR_TYPES: dict[str, ExtaLifeSensorEntityConfig] = {
-    SensorDeviceClass.ENERGY: ExtaLifeSensorEntityConfig(
+SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
+    SensorDeviceClass.ENERGY: ELSensorEntityDescription(
         native_unit_of_measurement=ENERGY_KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        value_path='total_energy',
         factor=0.00001,
     ),
-    ExtaSensorDeviceClass.APPARENT_ENERGY: ExtaLifeSensorEntityConfig(
+    ExtaSensorDeviceClass.APPARENT_ENERGY: ELSensorEntityDescription(
         native_unit_of_measurement="kVAh",
         device_class=ExtaSensorDeviceClass.APPARENT_ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         factor=0.00001,
     ),
-    ExtaSensorDeviceClass.REACTIVE_ENERGY: ExtaLifeSensorEntityConfig(
+    ExtaSensorDeviceClass.REACTIVE_ENERGY: ELSensorEntityDescription(
         native_unit_of_measurement="kvarh",
         device_class=ExtaSensorDeviceClass.REACTIVE_ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         factor=0.00001,
     ),
-    SensorDeviceClass.POWER: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.POWER: ELSensorEntityDescription(
         native_unit_of_measurement=POWER_WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    SensorDeviceClass.REACTIVE_POWER: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.REACTIVE_POWER: ELSensorEntityDescription(
         native_unit_of_measurement=POWER_VOLT_AMPERE_REACTIVE,
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    SensorDeviceClass.APPARENT_POWER: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.APPARENT_POWER: ELSensorEntityDescription(
         native_unit_of_measurement=POWER_VOLT_AMPERE,
         device_class=SensorDeviceClass.APPARENT_POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    SensorDeviceClass.VOLTAGE: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.VOLTAGE: ELSensorEntityDescription(
         native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         factor=0.01,
     ),
-    SensorDeviceClass.POWER_FACTOR: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.POWER_FACTOR: ELSensorEntityDescription(
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
         factor=0.01,
     ),
-    SensorDeviceClass.CURRENT: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.CURRENT: ELSensorEntityDescription(
         native_unit_of_measurement=ELECTRIC_CURRENT_AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         factor=0.001,
     ),
-    SensorDeviceClass.FREQUENCY: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.FREQUENCY: ELSensorEntityDescription(
         native_unit_of_measurement=FREQUENCY_HERTZ,
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
         factor=0.01,
     ),
-    ExtaSensorDeviceClass.PHASE_SHIFT: ExtaLifeSensorEntityConfig(
+    ExtaSensorDeviceClass.PHASE_SHIFT: ELSensorEntityDescription(
         native_unit_of_measurement=DEGREE,
         device_class=ExtaSensorDeviceClass.PHASE_SHIFT,
         state_class=SensorStateClass.MEASUREMENT,
         factor=0.1,
     ),
-    SensorDeviceClass.PRESSURE: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.PRESSURE: ELSensorEntityDescription(
         native_unit_of_measurement=PRESSURE_HPA,
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         factor=1,
     ),
-    SensorDeviceClass.ILLUMINANCE: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.ILLUMINANCE: ELSensorEntityDescription(
         native_unit_of_measurement=LIGHT_LUX,
         device_class=SensorDeviceClass.ILLUMINANCE,
         state_class=SensorStateClass.MEASUREMENT,
         factor=1,
     ),
-    SensorDeviceClass.HUMIDITY: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.HUMIDITY: ELSensorEntityDescription(
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.HUMIDITY,
         state_class=SensorStateClass.MEASUREMENT,
         factor=1,
     ),
-    SensorDeviceClass.BATTERY: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.BATTERY: ELSensorEntityDescription(
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         factor=100,
     ),
-    SensorDeviceClass.TEMPERATURE: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.TEMPERATURE: ELSensorEntityDescription(
         native_unit_of_measurement=TEMP_CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -213,21 +223,21 @@ SENSOR_TYPES: dict[str, ExtaLifeSensorEntityConfig] = {
 
 # List of additional sensors which are created based on a property
 # The key is the property name
-VIRTUAL_SENSOR_TYPES: dict[str, ExtaLifeSensorEntityConfig] = {
-    SensorDeviceClass.ENERGY: ExtaLifeSensorEntityConfig(
+VIRTUAL_SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
+    SensorDeviceClass.ENERGY: ELSensorEntityDescription(
         key="energy",
         native_unit_of_measurement=ENERGY_KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
     )
 }, {
-    SensorDeviceClass.POWER: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.POWER: ELSensorEntityDescription(
         key="power",
         native_unit_of_measurement=POWER_WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    SensorDeviceClass.BATTERY: ExtaLifeSensorEntityConfig(
+    SensorDeviceClass.BATTERY: ELSensorEntityDescription(
         key="battery_status",
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
@@ -271,7 +281,7 @@ async def async_setup_entry(
                 ]
             )
 
-        core.pop_channels(DOMAIN_VIRTUAL_SENSOR)
+        core.pop_channels(virtual_domain)
 
 
 class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
@@ -280,8 +290,8 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
     def __init__(self, channel_data, config_entry):
         super().__init__(channel_data, config_entry)
 
-        self.channel_data = channel_data.get("data")
-        self._config: ExtaLifeSensorEntityConfig = None
+        # self.channel_data = channel_data.get("data")
+        self._config: SensorEntityConfig = None
 
     @property
     def device_class(self):
@@ -298,7 +308,6 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
     @property
     def native_value(self):
         """Return state of the sensor"""
-        # multisensor?
 
         value = self.get_value_from_attr_path(self._config.value_path)
 
@@ -332,7 +341,7 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
 
     def get_value_from_attr_path(self, path: str):
         """Extract value from encoded path"""
-        # Example path: 'phase[1]voltage   -> array phase, row 1, field voltage
+        # Example path: 'phase[1].voltage   -> array phase, row 1, field voltage
         # attr.append({"dev_class": dev_class, "path": f"?phase[{c}]{k}", "unit": unit})
         def find_element(path: str, dictionary: dict):
             """Read field value by path e.g. test[1].value21.
@@ -372,13 +381,13 @@ class ExtaLifeSensor(ExtaLifeSensorBase):
         else:
             dev_class = MAP_EXTA_DEV_TYPE_TO_DEV_CLASS[dev_type]
 
-        self._config = SENSOR_TYPES[dev_class]
+        self._config = SensorEntityConfig(SENSOR_TYPES[dev_class])
 
         # create virtual, attribute sensors
         virtual_sensors = self.virtual_sensor_attributes
         _LOGGER.debug("Virtual sensors: %s", virtual_sensors)
         for virtual in virtual_sensors:
-            v_channel_data = channel_data
+            v_channel_data = channel_data.copy()
             v_channel_data.update({VIRT_SENSOR_CHN_FIELD: virtual})
             self.core.push_channels(
                 DOMAIN_VIRTUAL_SENSOR, v_channel_data, append=True, custom=True
@@ -420,15 +429,14 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBase):
 
     def __init__(self, channel_data, config_entry, virtual_domain):
         super().__init__(channel_data, config_entry)
-        self.channel_data = channel_data.get("data")
 
         self._virtual_domain = virtual_domain
         self._virtual_prop: dict = channel_data.get(VIRT_SENSOR_CHN_FIELD)
 
-        self._config: ExtaLifeSensorEntityConfig = SENSOR_TYPES[
-            self._virtual_prop.get(VIRT_SENSOR_DEV_CLS)
-        ]
+        self._config = SensorEntityConfig(SENSOR_TYPES[self._virtual_prop.get(VIRT_SENSOR_DEV_CLS)])
+
         self.override_config_from_dict(self._virtual_prop)
+
 
     def override_config_from_dict(self, override: dict):
         """Override sensor config from a dict"""
@@ -452,6 +460,7 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBase):
 
         chars = escape(punctuation)
         escaped = sub(r"[" + chars + "]", " ", path)
+        escaped = sub(' +', ' ', escaped)       # remove double spaces
 
         return escaped
 

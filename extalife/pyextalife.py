@@ -245,6 +245,11 @@ DEVICE_ICON_ARR_LIGHT = [
 ]  # override device and type rules based on icon; force 'light' device for some icons, but only when device was detected preliminarly as switch; 28 =LED
 
 
+try:
+    from .fake_channels import FAKE_RECEIVERS, FAKE_SENSORS, FAKE_TRANSMITTERS
+except ImportError:
+    FAKE_RECEIVERS = FAKE_SENSORS = FAKE_TRANSMITTERS = []
+
 class ExtaLifeAPI:
     """ Main API class: wrapper for communication with controller """
 
@@ -460,11 +465,13 @@ class ExtaLifeAPI:
                 cmd = self.CMD_FETCH_RECEIVERS
                 resp = await self._connection.async_execute_command(cmd, None)
                 # here is where the magic happens - transform TCP JSON data into API channel representation
+                resp.extend(FAKE_RECEIVERS)
                 channels.extend(self._get_channels_int(resp))
 
             if self.CHN_TYP_SENSORS in include:
                 cmd = self.CMD_FETCH_SENSORS
                 resp = await self._connection.async_execute_command(cmd, None)
+                resp.extend(FAKE_SENSORS)
                 channels.extend(self._get_channels_int(resp))
 
             if self.CHN_TYP_TRANSMITTERS in include:

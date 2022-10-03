@@ -37,7 +37,7 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
 
     _LOGGER.debug("async_get_triggers() device_id: %s", device_id)
 
-    device_registry = await hass.helpers.device_registry.async_get_registry()
+    device_registry = hass.helpers.device_registry.async_get()
     device = device_registry.async_get(device_id)
     if device is None:
         return
@@ -76,7 +76,7 @@ async def async_attach_trigger(
 
     _LOGGER.debug("async_attach_trigger() config: %s, action: %s, automation_info: %s", config, action,automation_info )
 
-    device_registry = await hass.helpers.device_registry.async_get_registry()
+    device_registry = hass.helpers.device_registry.async_get()
     device = device_registry.async_get(config[CONF_DEVICE_ID])
     if device is None:
         _LOGGER.warning("async_attach_trigger() device_id: %s doesn't exist in Device Registry anymore", config[CONF_DEVICE_ID] )
