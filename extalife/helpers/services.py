@@ -46,7 +46,8 @@ class ExtaLifeServices():
 
     def _get_entry_id(self, entity_id: str):
         """ Resolve ConfigEntry.entry_id for entity_id """
-        registry = asyncio.run_coroutine_threadsafe(er.async_get_registry(self._hass), self._hass.loop).result()
+        # registry = asyncio.run_coroutine_threadsafe(er.async_get_registry(self._hass), self._hass.loop).result()
+        registry = er.async_get(self._hass)
         return registry.async_get(entity_id).config_entry_id
 
     async def async_register_services(self):
