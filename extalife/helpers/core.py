@@ -10,7 +10,7 @@ from homeassistant.helpers.typing import HomeAssistantType, ConfigType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 
-from .const import DATA_CORE, DOMAIN
+from .const import DATA_CORE, DOMAIN, CONF_EXTALIFE_EVENT_SCENE
 from ..pyextalife import ExtaLifeAPI
 from .typing import (
     TransmitterManagerType,
@@ -20,6 +20,11 @@ from .typing import (
     CoreType,
 )
 from .services import ExtaLifeServices
+
+
+MAP_NOTIF_CMD_TO_EVENT = {
+    ExtaLifeAPI.CMD_ACTIVATE_SCENE: CONF_EXTALIFE_EVENT_SCENE
+}
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -198,7 +203,13 @@ class Core:
     def _on_status_notification_callback(self, msg):
         if self._is_unloading or self._is_stopping:
             return
-        self._data_manager.on_notify(msg)
+
+        # forward only state notifications to data manager to update channels
+        if msg.get("command") == self.api.CMD_CONTROL_DEVICE:
+            self._data_manager.on_notify(msg)
+
+        self._put_notification_on_event_bus(msg)
+
 
     async def _periodic_reconnect_callback(self, now):
         """Reconnect with the controller after connection is lost
@@ -216,6 +227,13 @@ class Core:
 
         entity - Entity object"""
         self._controller_entity = entity
+
+    def _put_notification_on_event_bus(self, msg):
+        """ This method raises a notification on HA Event Bus """
+        data = msg.get("data")
+        event = MAP_NOTIF_CMD_TO_EVENT.get(msg.get("command"))
+        if event:
+            self._hass.bus.async_fire(event, event_data=data)
 
     @property
     def api(self) -> ExtaLifeAPI:

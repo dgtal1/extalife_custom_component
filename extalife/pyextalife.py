@@ -259,6 +259,7 @@ class ExtaLifeAPI:
     CMD_FETCH_RECEIVERS = 37
     CMD_FETCH_SENSORS = 38
     CMD_FETCH_TRANSMITTERS = 39
+    CMD_ACTIVATE_SCENE = 44
     CMD_FETCH_NETW_SETTINGS = 102
     CMD_FETCH_EXTAFREE = 203
     CMD_VERSION = 151
@@ -388,7 +389,7 @@ class ExtaLifeAPI:
 
     async def _async_on_notification_callback(self, data):
         """ Called when notification from the controller is received """
-        if self._on_notification_callback(data) is not None and data.get("command") == self.CMD_CONTROL_DEVICE:
+        if self._on_notification_callback(data) is not None:
             # forward only device status changes to the listener
             self._on_notification_callback(data)
 
