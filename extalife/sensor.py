@@ -166,10 +166,9 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         factor=0.01,
     ),
     SensorDeviceClass.POWER_FACTOR: ELSensorEntityDescription(
-        native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
-        factor=0.01,
+        factor=0.001,
     ),
     SensorDeviceClass.CURRENT: ELSensorEntityDescription(
         native_unit_of_measurement=ELECTRIC_CURRENT_AMPERE,
@@ -218,32 +217,6 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         factor=1,
-    ),
-}
-
-# List of additional sensors which are created based on a property
-# The key is the property name
-VIRTUAL_SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
-    SensorDeviceClass.ENERGY: ELSensorEntityDescription(
-        key="energy",
-        native_unit_of_measurement=ENERGY_KILO_WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    )
-}, {
-    SensorDeviceClass.POWER: ELSensorEntityDescription(
-        key="power",
-        native_unit_of_measurement=POWER_WATT,
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorDeviceClass.BATTERY: ELSensorEntityDescription(
-        key="battery_status",
-        native_unit_of_measurement=PERCENTAGE,
-        device_class=SensorDeviceClass.BATTERY,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_path="",
-        factor=100,
     ),
 }
 
