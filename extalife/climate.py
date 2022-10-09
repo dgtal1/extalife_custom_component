@@ -148,10 +148,11 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
             self.async_schedule_update_ha_state()
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device specific state attributes."""
-        attr = super().device_state_attributes
-
+        attr = super().extra_state_attributes
+        if attr is None:
+            attr = {}
         data = self.channel_data
         attr.update(
             {

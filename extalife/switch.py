@@ -80,13 +80,15 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
         return False
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device specific state attributes."""
-        attr = super().device_state_attributes
+        attr = super().extra_state_attributes
         data = self.channel_data
 
         # ROG-21 measurement attributes
         if self.model == MODEL_ROG21:
+            if attr is None:
+                attr = {}
             attr.update(
                 {
                     "voltage": data.get("voltage") / 100,

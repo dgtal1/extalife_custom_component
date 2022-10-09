@@ -853,14 +853,21 @@ class ExtaLifeController(Entity):
         return "ready"
 
     @property
-    def device_state_attributes(self):
-        return {
-            "type": "gateway",
-            "mac_address": self.mac,
-            "ipv4_addres:": self.api.host,
-            "software_version": self.api.sw_version,
-            "name": self.api.name,
-        }
+    def extra_state_attributes(self):
+        """Return device specific state attributes."""
+        attr = super().extra_state_attributes
+        if attr is None:
+            attr = {}
+        attr.update(
+                {
+                     "type": "gateway",
+                     "mac_address": self.mac,
+                     "ipv4_addres:": self.api.host,
+                     "software_version": self.api.sw_version,
+                     "name": self.api.name,
+                }
+            )
+        return attr
 
     async def async_update(self):
         """Entity update callback"""
