@@ -4,20 +4,18 @@ from pprint import pformat
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.cover import (
+    CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
     ATTR_POSITION,
-    DEVICE_CLASS_SHUTTER,
-    DEVICE_CLASS_GATE,
-    DEVICE_CLASS_DOOR,
     DOMAIN as DOMAIN_COVER,
 )
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN, OPTIONS_COVER_INVERTED_CONTROL
+from .helpers.const import OPTIONS_COVER_INVERTED_CONTROL, DOMAIN_VIRTUAL_COVER_SENSOR
 from .helpers.core import Core
-from .pyextalife import ExtaLifeAPI, MODEL_ROB01, MODEL_ROB21, DEVICE_MAP_TYPE_TO_MODEL, DEVICE_ARR_COVER, DEVICE_ARR_SENS_GATE_CONTROLLER
+from .pyextalife import ExtaLifeAPI, MODEL_ROB01, DEVICE_MAP_TYPE_TO_MODEL, DEVICE_ARR_COVER, DEVICE_ARR_SENS_GATE_CONTROLLER   # pylint: disable=syntax-error
 
 GATE_CHN_TYPE_GATE = 0
 GATE_CHN_TYPE_TILT_GATE = 1
@@ -29,7 +27,6 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
-    pass
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
     """Set up Exta Life covers based on existing config."""
@@ -44,6 +41,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
 
 class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     """Representation of ExtaLife Cover"""
+    def __init__(self, channel_data, config_entry: ConfigEntry):
+        super().__init__(channel_data, config_entry)
+
+        self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_COVER_SENSOR, channel_data)
 
     # Exta Life extreme cover positions
     POS_CLOSED = 100
@@ -54,11 +55,11 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         dev_type = self.channel_data.get("type")
         chn_type = self.channel_data.get("channel_type")
         if dev_type in DEVICE_ARR_COVER:
-            return DEVICE_CLASS_SHUTTER
+            return CoverDeviceClass.SHUTTER
         elif chn_type == GATE_CHN_TYPE_WICKET:
-            return DEVICE_CLASS_DOOR
+            return CoverDeviceClass.DOOR
         else:
-            return DEVICE_CLASS_GATE
+            return CoverDeviceClass.GATE
 
 
     @property
@@ -82,7 +83,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         # ARROW DOWN - close cover
         # THIS CANNOT BE CHANGED AS IT'S HARDCODED IN HA GUI
 
-        if self.is_exta_free or self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR:
+        if self.is_exta_free or self.device_class == CoverDeviceClass.GATE or self.device_class == CoverDeviceClass.DOOR:
             return
 
         val = self.channel_data.get("value")
@@ -124,9 +125,9 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
         data = self.channel_data
-        pos  = 1 if self.device_class == DEVICE_CLASS_GATE or self.device_class == DEVICE_CLASS_DOOR else  ExtaLifeCover.POS_OPEN  #ROB-21 to open 'pos' must be different from 0
+        pos  = 1 if self.device_class == CoverDeviceClass.GATE or self.device_class == CoverDeviceClass.DOOR else  ExtaLifeCover.POS_OPEN  #ROB-21 to open 'pos' must be different from 0
         if not self.is_exta_free:
-            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != CoverDeviceClass.GATE and self.device_class != CoverDeviceClass.DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
             if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("open_cover for cover: %s. model: %s", self.entity_id, pos)
@@ -140,7 +141,7 @@ class ExtaLifeCover(ExtaLifeChannel, CoverEntity):
         data = self.channel_data
         pos = ExtaLifeCover.POS_CLOSED
         if not self.is_exta_free:
-            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != DEVICE_CLASS_GATE and self.device_class != DEVICE_CLASS_DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
+            action = ExtaLifeAPI.ACTN_SET_POS if self.device_class != CoverDeviceClass.GATE and self.device_class != CoverDeviceClass.DOOR else ExtaLifeAPI.ACTN_SET_GATE_POS
             if await self.async_action(action, value=pos):
                 data["value"] = pos
                 _LOGGER.debug("close_cover for cover: %s. model: %s", self.entity_id, pos)

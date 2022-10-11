@@ -6,14 +6,10 @@ from pprint import pformat
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.light import (
-    LightEntity,
     ColorMode,
     LightEntity,
     LightEntityFeature,
-    brightness_supported,
-    color_supported,
     ATTR_BRIGHTNESS,
-    ATTR_HS_COLOR,
     ATTR_RGBW_COLOR,
     ATTR_EFFECT,
     DOMAIN as DOMAIN_LIGHT,
@@ -21,16 +17,12 @@ from homeassistant.components.light import (
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN
+from .helpers.const import DOMAIN_VIRTUAL_LIGHT_SENSOR
 from .helpers.core import Core
-from .pyextalife import (
+from .pyextalife import (       # pylint: disable=syntax-error
     ExtaLifeAPI,
     ExtaLifeDeviceModel,
-    DEVICE_ARR_ALL_LIGHT,
-    DEVICE_ARR_LIGHT_RGB,
-    DEVICE_ARR_LIGHT_RGBW,
-    DEVICE_ARR_LIGHT_EFFECT,
-    DEVICE_ARR_EXTA_FREE_RGB,
+    DEVICE_ARR_ALL_LIGHT
 )
 
 import homeassistant.util.color as color_util
@@ -147,7 +139,6 @@ def modeval_upd(old, new):
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
-    pass
 
 
 async def async_setup_entry(
@@ -201,10 +192,7 @@ class ExtaLifeLight(ExtaLifeChannel, LightEntity):
 
         _LOGGER.debug("Light type: %s", dev_type)
 
-        # if dev_type in DEVICE_ARR_LIGHT_EFFECT:
-        #     self._supported_flags |= SUPPORT_EFFECT
-        #     if dev_type in [27, 38]:
-        #         self._effect_list = EFFECT_LIST_SLR
+        self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_LIGHT_SENSOR, channel_data)
 
     async def async_turn_on(self, **kwargs):
         """Turn on the switch."""
