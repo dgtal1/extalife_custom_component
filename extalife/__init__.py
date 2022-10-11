@@ -24,9 +24,9 @@ from homeassistant.components.cover import DOMAIN as DOMAIN_COVER
 from homeassistant.components.sensor import DOMAIN as DOMAIN_SENSOR
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 
-from .pyextalife import ExtaLifeAPI
-from .pyextalife import TCPConnError
-from .pyextalife import (
+from .pyextalife import ExtaLifeAPI         # pylint: disable=syntax-error
+from .pyextalife import TCPConnError        # pylint: disable=syntax-error
+from .pyextalife import (                   # pylint: disable=syntax-error
     DEVICE_ARR_ALL_SWITCH,
     DEVICE_ARR_ALL_LIGHT,
     DEVICE_ARR_ALL_COVER,
@@ -53,10 +53,8 @@ from .helpers.const import (
     CONF_POLL_INTERVAL,
     DEFAULT_POLL_INTERVAL,
     OPTIONS_COVER_INVERTED_CONTROL,
-    OPTIONS_LIGHT_ICONS_LIST,
     SIGNAL_DATA_UPDATED,
     SIGNAL_NOTIF_STATE_UPDATED,
-    DATA_CORE,
     DOMAIN_TRANSMITTER,
     CONF_OPTIONS,
     OPTIONS_SWITCH,
@@ -67,6 +65,9 @@ from .helpers.const import (
     OPTIONS_GENERAL,
     OPTIONS_GENERAL_POLL_INTERVAL,
     OPTIONS_GENERAL_DISABLE_NOT_RESPONDING,
+    VIRT_SENSOR_CHN_FIELD,
+    VIRT_SENSOR_DEV_CLS,
+    VIRT_SENSOR_PATH,
 )
 
 from .helpers.services import ExtaLifeServices
@@ -144,7 +145,7 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
             new.pop(
                 CONF_OPTIONS
             )  # get rid of errorneously migrated options from integration 1.0
-        except:
+        except:     # pylint: disable=bare-except
             pass
         config_entry.data = {**new}
 
@@ -168,7 +169,7 @@ async def async_setup(hass: HomeAssistantType, hass_config: ConfigType):
         )
         _LOGGER.debug("async_setup, hass.data.domain: %s", hass.data.get(DOMAIN))
 
-        result = hass.async_create_task(
+        result = hass.async_create_task(                            # pylint: disable=unused-variable
             hass.config_entries.flow.async_init(
                 DOMAIN, context={"source": SOURCE_IMPORT}, data=hass_config[DOMAIN]
             )
@@ -240,7 +241,7 @@ async def initialize(hass: HomeAssistantType, config_entry: ConfigEntry):
     controller_ip = el_conf[CONF_CONTROLLER_IP]  # will be known after config flow
 
     try:
-        _LOGGER.info("ExtaLife initializing...")
+        _LOGGER.info("ExtaLife initializing...")                # pylint: disable=hass-logger-period
         if controller_ip is not None:
             _LOGGER.debug("Trying to connect to controller using IP: %s", controller_ip)
         else:
@@ -251,7 +252,7 @@ async def initialize(hass: HomeAssistantType, config_entry: ConfigEntry):
             controller = await api_connect(
                 el_conf[CONF_USER], el_conf[CONF_PASSWORD], controller_ip
             )
-        except TCPConnError as e:
+        except TCPConnError as e:           # pylint: disable=invalid-name
             _LOGGER.debug(
                 "Connection exception: %s, class: %s", e.previous, e.previous.__class__
             )
@@ -287,12 +288,12 @@ async def initialize(hass: HomeAssistantType, config_entry: ConfigEntry):
 
             return False
 
-    except TCPConnError as e:
+    except TCPConnError as e:                                                               # pylint: disable=invalid-name, unused-variable
         host = controller.host if (controller and controller.host) else "unknown"
         _LOGGER.error("Could not connect to EFC-01 on IP: %s", host)
 
         await core.unload_entry_from_hass()
-        raise ConfigEntryNotReady
+        raise ConfigEntryNotReady                                                           # pylint: disable=raise-missing-from
 
     await core.register_controller()
 
@@ -310,7 +311,7 @@ async def initialize(hass: HomeAssistantType, config_entry: ConfigEntry):
 class ChannelDataManager:
     """Get the latest data from EFC-01, call device discovery, handle status notifications."""
 
-    def __init__(self, hass: HomeAssistantType, config_entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistantType, config_entry: ConfigEntry) -> None:
         """Initialize the data object."""
         self.data = None
         self._hass = hass
@@ -324,6 +325,8 @@ class ChannelDataManager:
 
         self._poller_callback_remove = None
         self._ping_callback_remove = None
+
+        return None
 
     @property
     def core(self):
@@ -347,7 +350,7 @@ class ChannelDataManager:
         else:
             self.core.async_signal_send_sync(signal, data)
 
-    def update_channel(self, id: str, data: dict):
+    def update_channel(self, id: str, data: dict):      # pylint: disable=redefined-builtin
         """Update data of a channel e.g. after notification data received and processed
         by an entity"""
         self.channels_indx.update({id: data})
@@ -380,7 +383,7 @@ class ChannelDataManager:
         """Get the latest device&channel status data from EFC-01.
         This method is called from HA task scheduler via async_track_time_interval"""
 
-        _LOGGER.debug("Executing EFC-01 status polling....")
+        _LOGGER.debug("Executing EFC-01 status polling....")    # pylint: disable=hass-logger-period
         # use Exta Life TCP communication class
 
         # if connection error or other - will receive None
@@ -534,8 +537,6 @@ class ExtaLifeChannel(Entity):
     add_entity_cb - HA callback for adding entity in entity registry
     """
 
-    # _cmd_in_execution = False
-
     def __init__(self, channel_data, config_entry: ConfigEntry):
         """Channel data -- channel information from PyExtaLife."""
         # e.g. channel_data = { "id": "0-1", "data": {TCP attributes}}
@@ -585,7 +586,6 @@ class ExtaLifeChannel(Entity):
 
     def on_state_notification(self, data):
         """must be overriden in entity subclasses"""
-        pass
 
     def get_unique_id(self):
         """Provide unique id for HA entity registry"""
@@ -731,9 +731,46 @@ class ExtaLifeChannel(Entity):
         }
 
     @property
-    def virtual_sensor_attributes(self) -> list:
-        """Return channel attributes which will serve as the basis for virtual sensors"""
-        return
+    def virtual_sensors(self) -> list:
+        """Return channel attributes which will serve as the basis for virtual sensors.
+        Platforms should implement this property and return additional sensors if needed"""
+        return []
+
+    def _get_virtual_sensors(self) -> list:
+        """By default check all entity attributes and return virtual sensor config"""
+        from .sensor import MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS
+
+        attr = []
+        for k, v in self.channel_data.items():                      # pylint: disable=unused-variable
+            dev_class = MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS.get(k)
+            if dev_class:
+                attr.append(
+                    {
+                        VIRT_SENSOR_DEV_CLS: dev_class,
+                        VIRT_SENSOR_PATH: k
+                    }
+                )
+
+        # get additional sensors returned by specific platform
+        platform_sensors = self.virtual_sensors
+        if platform_sensors:
+            attr.extend(platform_sensors)
+
+        return attr
+
+    def push_virtual_sensor_channels(self, virtual_sensor_domain: str, channel_data: dict):
+        """Push additional, virtual sensor channels for entity attributes. These should be
+        processed by all platforms during platform setup and ultimately sensor entities
+        shouldbe created by the sensor platform"""
+
+        virtual_sensors = self._get_virtual_sensors()
+        _LOGGER.debug("Virtual sensors: %s", virtual_sensors)
+        for virtual in virtual_sensors:
+            v_channel_data = channel_data.copy()
+            v_channel_data.update({VIRT_SENSOR_CHN_FIELD: virtual})
+            self.core.push_channels(
+                virtual_sensor_domain, v_channel_data, append=True, custom=True
+            )
 
     def format_state_attr(self, attr: dict):
         """Format state atteibutes based on name and other criteria.
@@ -872,4 +909,3 @@ class ExtaLifeController(Entity):
     async def async_update(self):
         """Entity update callback"""
         # not necessary for the controller entity; will be updated on demand, externally
-        pass

@@ -39,7 +39,7 @@ from .helpers.const import (
     VIRT_SENSOR_DEV_CLS,
     VIRT_SENSOR_PATH,
 )
-from .pyextalife import (
+from .pyextalife import (           # pylint: disable=syntax-error
     DEVICE_ARR_SENS_ENERGY_METER,
     DEVICE_ARR_SENS_TEMP,
     DEVICE_ARR_SENS_LIGHT,
@@ -80,6 +80,7 @@ class ExtaSensorDeviceClass(StrEnum):
     APPARENT_ENERGY = "apparent_energy"  # kVAh
     REACTIVE_ENERGY = "reactive_energy"  # kvarh
     PHASE_SHIFT = "phase_shift"
+    MANUAL_ENERGY = "manual_energy"
 
 
 MAP_EXTA_DEV_TYPE_TO_DEV_CLASS = {}
@@ -107,6 +108,7 @@ MAP_EXTA_MULTI_CHN_TO_DEV_CLASS = {
 }
 
 MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS = {
+    "battery_status": SensorDeviceClass.BATTERY,
     "voltage": SensorDeviceClass.VOLTAGE,
     "current": SensorDeviceClass.CURRENT,
     "active_power": SensorDeviceClass.POWER,
@@ -119,6 +121,7 @@ MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS = {
     "apparent_energy": ExtaSensorDeviceClass.APPARENT_ENERGY,
     "active_energy_solar": SensorDeviceClass.ENERGY,
     "reactive_energy_solar": ExtaSensorDeviceClass.REACTIVE_ENERGY,
+    "manual_energy": ExtaSensorDeviceClass.MANUAL_ENERGY,
 }
 
 
@@ -130,6 +133,13 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         value_path='total_energy',
+        factor=0.00001,
+    ),
+    ExtaSensorDeviceClass.MANUAL_ENERGY: ELSensorEntityDescription(
+        native_unit_of_measurement=ENERGY_KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_path='manual_energy',
         factor=0.00001,
     ),
     ExtaSensorDeviceClass.APPARENT_ENERGY: ELSensorEntityDescription(
@@ -223,7 +233,6 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
-    pass
 
 
 async def async_setup_entry(
@@ -357,34 +366,18 @@ class ExtaLifeSensor(ExtaLifeSensorBase):
         self._config = SensorEntityConfig(SENSOR_TYPES[dev_class])
 
         # create virtual, attribute sensors
-        virtual_sensors = self.virtual_sensor_attributes
-        _LOGGER.debug("Virtual sensors: %s", virtual_sensors)
-        for virtual in virtual_sensors:
-            v_channel_data = channel_data.copy()
-            v_channel_data.update({VIRT_SENSOR_CHN_FIELD: virtual})
-            self.core.push_channels(
-                DOMAIN_VIRTUAL_SENSOR, v_channel_data, append=True, custom=True
-            )
+        self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_SENSOR, channel_data)
 
     @property
-    def virtual_sensor_attributes(self) -> list:
-        """List of condig dicts"""
-        from re import search
-
+    def virtual_sensors(self) -> list:
+        """List of config dicts"""
+        attr = []
         # return attribute + unit pairs
         data = self.channel_data
-        attr = list()
-        if data.get("battery_status") is not None:
-            attr.append(
-                {
-                    VIRT_SENSOR_PATH: "battery_status",
-                    VIRT_SENSOR_DEV_CLS: SensorDeviceClass.BATTERY,
-                }
-            )
         phase = data.get("phase")
         if phase is not None:
             for p in phase:
-                for k, v in p.items():
+                for k, v in p.items():      # pylint: disable=unused-variable
                     dev_class = MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS.get(k)
                     if dev_class:
                         attr.append(
@@ -413,9 +406,8 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBase):
 
     def override_config_from_dict(self, override: dict):
         """Override sensor config from a dict"""
-        for k, v in override.items():
+        for k, v in override.items():           # pylint: disable=unused-variable
             setattr(self._config, k, v)
-        pass
 
     def get_unique_id(self) -> str:
         """Override return a unique ID.

@@ -7,15 +7,14 @@ from homeassistant.components.switch import SwitchEntity, DOMAIN as DOMAIN_SWITC
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN
+from .helpers.const import DOMAIN_VIRTUAL_SWITCH_SENSOR
 from .helpers.core import Core
-from .pyextalife import ExtaLifeAPI, MODEL_ROG21
+from .pyextalife import ExtaLifeAPI     # pylint: disable=syntax-error
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
-    pass
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
     """Set up Exta Life switches based on existing config."""
@@ -39,6 +38,8 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
         self._type = data.get("type")
 
         self._assumed_on = False
+
+        self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_SWITCH_SENSOR, channel_data)
 
     async def async_turn_on(self, **kwargs):
         """Turn on the switch."""
@@ -79,26 +80,6 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
             return True
         return False
 
-    @property
-    def extra_state_attributes(self):
-        """Return device specific state attributes."""
-        attr = super().extra_state_attributes
-        data = self.channel_data
-
-        # ROG-21 measurement attributes
-        if self.model == MODEL_ROG21:
-            if attr is None:
-                attr = {}
-            attr.update(
-                {
-                    "voltage": data.get("voltage") / 100,
-                    "current": data.get("current") / 1000,
-                    "active_power": data.get("active_power"),
-                    "energy_consumption": data.get("manual_energy") / 100000
-                }
-            )
-
-        return attr
 
     def on_state_notification(self, data):
         """ React on state notification from controller """
@@ -118,4 +99,4 @@ class ExtaLifeSwitch(ExtaLifeChannel, SwitchEntity):
             # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()
 
- 
+

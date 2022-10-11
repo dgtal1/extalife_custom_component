@@ -6,17 +6,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, DOMAIN as DOMAIN_CLIMATE
 from homeassistant.components.climate.const import (
-    HVAC_MODE_AUTO,
-    HVAC_MODE_HEAT,
-    CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_HEAT,
+    HVACAction,
+    HVACMode,
 )
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN
+from .helpers.const import DOMAIN_VIRTUAL_CLIMATE_SENSOR
 from .helpers.core import Core
-from .pyextalife import ExtaLifeAPI
+from .pyextalife import ExtaLifeAPI             # pylint: disable=syntax-error
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,47 +25,46 @@ _LOGGER = logging.getLogger(__name__)
 
 # map Exta Life "work_mode" field
 EXTA_HVAC_MODE = {
-    True: HVAC_MODE_AUTO,
-    False: HVAC_MODE_HEAT,
+    True: HVACMode.AUTO,
+    False: HVACMode.HEAT,
 }
 
 # map Exta Life notification "state" field
 EXTA_STATE_HVAC_MODE = {
-    1: HVAC_MODE_AUTO,
-    0: HVAC_MODE_HEAT,
+    1: HVACMode.AUTO,
+    0: HVACMode.HEAT,
 }
 
 # map Exta Life "work_mode" field
 HVAC_MODE_EXTA = {
-    HVAC_MODE_AUTO: True,
-    HVAC_MODE_HEAT: False
+    HVACMode.AUTO: True,
+    HVACMode.HEAT: False
 }
 
 # map Exta Life "power" field
 EXTA_HVAC_ACTION = {
-    1: CURRENT_HVAC_HEAT,
-    0: CURRENT_HVAC_IDLE
+    1: HVACAction.HEATING,
+    0: HVACAction.IDLE
 }
 
 # map HA action to Exta Life "state" field
 HVAC_ACTION_EXTA = {
-    CURRENT_HVAC_HEAT: 1,
-    CURRENT_HVAC_IDLE: 0
+    HVACAction.HEATING: 1,
+    HVACAction.IDLE: 0
 }
 
 # map HA HVAC mode to Exta Life action
 HA_MODE_ACTION = {
-    HVAC_MODE_AUTO: ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO,
-    HVAC_MODE_HEAT: ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL
+    HVACMode.AUTO: ExtaLifeAPI.ACTN_SET_RGT_MODE_AUTO,
+    HVACMode.HEAT: ExtaLifeAPI.ACTN_SET_RGT_MODE_MANUAL
 }
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """setup via configuration.yaml not supported anymore"""
-    pass
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities):
     """Set up an Exta Life heat controllers """
-    # channels = hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS][DOMAIN_CLIMATE]
+
     core = Core.get(config_entry.entry_id)
     channels = core.get_channels(DOMAIN_CLIMATE)
 
@@ -78,6 +75,11 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry, 
 
 class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
     """Representation of Exta Life Thermostat."""
+
+    def __init__(self, channel_data, config_entry: ConfigEntry):
+        super().__init__(channel_data, config_entry)
+
+        self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_CLIMATE_SENSOR, channel_data)
 
     @property
     def supported_features(self):
@@ -111,7 +113,7 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
 
     @property
     def hvac_modes(self):
-        return [HVAC_MODE_AUTO, HVAC_MODE_HEAT]
+        return [HVACMode.AUTO, HVACMode.HEAT]
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode (heat, auto => manual, auto)."""
@@ -144,7 +146,7 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
 
         if await self.async_action(ExtaLifeAPI.ACTN_SET_TMP, value=temp_el):
             self.channel_data["value"] = temp_el
-            self.channel_data["work_mode"] = HVAC_MODE_EXTA[HVAC_MODE_HEAT]
+            self.channel_data["work_mode"] = HVAC_MODE_EXTA[HVACMode.HEAT]
             self.async_schedule_update_ha_state()
 
     @property
@@ -157,7 +159,6 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
         attr.update(
             {
                 "waiting_to_synchronize": data.get("waiting_to_synchronize"),
-                "battery_status": data.get("battery_status"),
                 "temperature_old": data.get("temperature_old")
             }
         )

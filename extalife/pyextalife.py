@@ -246,7 +246,7 @@ DEVICE_ICON_ARR_LIGHT = [
 
 
 try:
-    from .fake_channels import FAKE_RECEIVERS, FAKE_SENSORS, FAKE_TRANSMITTERS
+    from .fake_channels import FAKE_RECEIVERS, FAKE_SENSORS, FAKE_TRANSMITTERS      # pylint: disable=unused-import
 except ImportError:
     FAKE_RECEIVERS = FAKE_SENSORS = FAKE_TRANSMITTERS = []
 
@@ -321,7 +321,13 @@ class ExtaLifeAPI:
 
         self._loop: AbstractEventLoop = loop
 
+        self._host: str = None
+        self._user: str = None
+        self._password: str = None
+        self._connection: TCPAdapter = None
+
     async def async_connect(self, user, password, host=None):
+        """Connect & authenticate to the controller using user and password parameters"""
         self._host = host
         self._user = user
         self._password = password
@@ -559,7 +565,7 @@ class ExtaLifeAPI:
 
                 dev.pop("state")
                 for state in device["state"]:
-                    ch_no = state.get("channel", def_channel) if def_channel else state["channel"]
+                    ch_no = state.get("channel", def_channel) if def_channel else state["channel"]      # pylint: disable=unused-variable
                     channel = {
                         # API channel, not TCP channel
                         "id": str(device["id"]) + "-" + str(state.get("channel", def_channel)),
@@ -689,13 +695,10 @@ class APIMessage:
 
 class APIRequest(APIMessage):
 
-    def __init__(self, command: str, data: dict):
+    def __init__(self, command: str, data: dict) -> None:
         super().__init__()
         self.command = command
         self.data = data
-    # def from_dict(self, request: dict):
-    #     self.command = request.get("command")
-    #     self.data = request.get("data")
 
     def as_dict(self):
         return {"command": self.command, "data": self.data}
@@ -704,12 +707,12 @@ class APIRequest(APIMessage):
         return json.dumps(self.as_dict())
 
 class APIResponse(APIMessage):
-    def __init__(self, json: dict):
+    def __init__(self, json_d: dict) -> None:
         super().__init__()
-        self._as_dict = json
-        self.command = json.get("command")
-        self.data    = json.get("data")
-        self.status  = json.get("status")
+        self._as_dict = json_d
+        self.command = json_d.get("command")
+        self.data    = json_d.get("data")
+        self.status  = json_d.get("status")
 
     @classmethod
     def from_json(cls, json_str: str):
@@ -733,7 +736,7 @@ class TCPAdapter:
     _cmd_in_execution = False
 
     def __init__(self,
-            params: ConnectionParams):
+            params: ConnectionParams) -> None:
 
         from datetime import datetime
 
@@ -750,8 +753,8 @@ class TCPAdapter:
         self._connected = False
         self._stopped = False
         self._authenticated = False
-        self._tcp_reader: asyncio.StreamReader = None     # type: Optional[asyncio.StreamReader]
-        self._tcp_writer: asyncio.StreamWriter = None     # type: Optional[asyncio.StreamWriter]
+        self._tcp_reader: asyncio.StreamReader = None     # type asyncio.StreamReader
+        self._tcp_writer: asyncio.StreamWriter = None     # type asyncio.StreamWriter
         self._write_lock = asyncio.Lock()
         self._cmd_exec_lock = asyncio.Lock()
         self._running_task = None
@@ -763,6 +766,7 @@ class TCPAdapter:
 
         self._message_handlers = []
 
+        return None
 
 
     def _start_ping(self) -> None:
@@ -771,7 +775,7 @@ class TCPAdapter:
         self._ping_task = self._params.eventloop.create_task(self._ping_())
 
     async def _ping_(self) -> None:
-        from datetime import datetime, timedelta
+        from datetime import datetime       # pylint disable=import-outside-toplevel
         while self._connected:
             last_write = (datetime.now() - self._tcp_last_write).seconds
 
@@ -809,9 +813,9 @@ class TCPAdapter:
         except OSError as err:
             await self._async_on_error()
             raise TCPConnError(
-                 "Error while writing data: {}".format(err))
+                 "Error while writing data: {}".format(err))            # pylint: disable=raise-missing-from
 
-    async def async_send_message(self, msg) -> None:
+    async def async_send_message(self, msg) -> None:    # pylint disable=raise-missing-from
 
         _LOGGER.debug("Sending:  %s", str(msg))
         await self._async_write(bytes(msg))
@@ -847,12 +851,12 @@ class TCPAdapter:
             except asyncio.TimeoutError:
                 if self._stopped:
                     raise TCPConnError(
-                        "Disconnected while waiting for API response!")
+                        "Disconnected while waiting for API response!")             # pylint: disable=raise-missing-from
                 await self._async_on_error()
-                raise TCPConnError("Timeout while waiting for API response!")
+                raise TCPConnError("Timeout while waiting for API response!")       # pylint: disable=raise-missing-from
 
             try:
-                self._message_handlers.remove(on_message)
+                self._message_handlers.remove(on_message)                           # pylint: disable=raise-missing-from
             except ValueError:
                 pass
 
@@ -878,7 +882,7 @@ class TCPAdapter:
         try:
             ret = await self._tcp_reader.readuntil(chr(3).encode())
         except (asyncio.IncompleteReadError, OSError, TimeoutError) as err:
-            raise TCPConnError("Error while receiving data: {}".format(err))
+            raise TCPConnError("Error while receiving data: {}".format(err))            # pylint: disable=raise-missing-from
 
         return ret
 
@@ -925,11 +929,11 @@ class TCPAdapter:
         except OSError as err:
             await self._async_on_error()
             raise TCPConnError(
-                "Error connecting to {}: {}".format(self._params.host, err), previous=err)
+                "Error connecting to {}: {}".format(self._params.host, err), previous=err)      # pylint: disable=raise-missing-from
         except asyncio.TimeoutError:
             await self._async_on_error()
             raise TCPConnError(
-                "Timeout while connecting to {}".format(self._params.host))
+                "Timeout while connecting to {}".format(self._params.host))                     # pylint: disable=raise-missing-from
 
         _LOGGER.debug("%s: Opened socket for", self._params.host)
         self._tcp_reader, self._tcp_writer = await asyncio.open_connection(sock=self._socket)
@@ -1059,7 +1063,7 @@ class TCPAdapter:
         # Bind to the server address
         try:
             sock.bind(server_address)
-        except socket.error as e:
+        except socket.error as e:               # pylint: disable=usused-variable
             sock.close()
             sock = None
             _LOGGER.error("Could not connect to receive UDP multicast from EFC-01 on port %s", MCAST_PORT)
@@ -1073,7 +1077,7 @@ class TCPAdapter:
         sock.settimeout(3)
         try:
             data, address = sock.recvfrom(1024)
-        except Exception:
+        except Exception:                       # pylint: disable=broad-except
             sock.close()
             return
         sock.close()
