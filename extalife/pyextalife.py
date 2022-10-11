@@ -432,7 +432,7 @@ class ExtaLifeAPI:
     async def async_get_mac(self):
         from getmac import get_mac_address
         # get EFC-01 controller MAC address
-        return await self._loop.run_in_executor(None, get_mac_address, None, self._host)
+        return await self._loop.run_in_executor(None, get_mac_address, None, self._host, None, self._host)
 
     @property
     def mac(self):
