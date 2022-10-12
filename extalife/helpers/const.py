@@ -36,6 +36,7 @@ DOMAIN_TRANSMITTER = "transmitter"
 
 # virtual sensors aren't attached to a channel, but to an entity
 DOMAIN_VIRTUAL_SENSOR = "virtual_sensor"
+DOMAIN_VIRTUAL_BINARY_SENSOR_SENSOR = "virtual_binary_sensor_sensor"
 DOMAIN_VIRTUAL_LIGHT_SENSOR = "virtual_light_sensor"
 DOMAIN_VIRTUAL_SWITCH_SENSOR = "virtual_switch_sensor"
 DOMAIN_VIRTUAL_COVER_SENSOR = "virtual_cover_sensor"
