@@ -153,7 +153,8 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
     def extra_state_attributes(self):
         """Return device specific state attributes."""
         attr = super().extra_state_attributes
-
+        if attr is None:
+            attr = {}
         data = self.channel_data
         attr.update(
             {
