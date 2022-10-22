@@ -38,6 +38,7 @@ from .helpers.const import (
     VIRT_SENSOR_CHN_FIELD,
     VIRT_SENSOR_DEV_CLS,
     VIRT_SENSOR_PATH,
+    VIRT_SENSOR_ALLOWED_CHANNELS,
 )
 from .pyextalife import (           # pylint: disable=syntax-error
     DEVICE_ARR_SENS_ENERGY_METER,
@@ -124,6 +125,9 @@ MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS = {
     "manual_energy": ExtaSensorDeviceClass.MANUAL_ENERGY,
 }
 
+VIRTUAL_SENSOR_RESTRICTIONS = {
+  "battery_status": {VIRT_SENSOR_ALLOWED_CHANNELS: (1,)}
+}
 
 # List of additional sensors which are created based on a property
 # The key is the property name

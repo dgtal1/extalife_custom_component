@@ -47,6 +47,7 @@ DOMAIN_VIRTUAL_SENSORS = (
     DOMAIN_VIRTUAL_COVER_SENSOR,
     DOMAIN_VIRTUAL_LIGHT_SENSOR,
     DOMAIN_VIRTUAL_SWITCH_SENSOR,
+    DOMAIN_VIRTUAL_BINARY_SENSOR_SENSOR,
 )
 
 # virtual sensor config dict attributes
@@ -58,6 +59,9 @@ VIRT_SENSOR_NAME_SUFFIX = "name_suffix"
 
 # virtual sensor channel data field
 VIRT_SENSOR_CHN_FIELD = "_virtual_sensor"
+
+# sensor restrictions
+VIRT_SENSOR_ALLOWED_CHANNELS = "allowed_channels"
 
 # events and devices
 CONF_EXTALIFE_EVENT_UNIQUE_ID = "unique_id"

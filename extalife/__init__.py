@@ -68,6 +68,7 @@ from .helpers.const import (
     VIRT_SENSOR_CHN_FIELD,
     VIRT_SENSOR_DEV_CLS,
     VIRT_SENSOR_PATH,
+    VIRT_SENSOR_ALLOWED_CHANNELS
 )
 
 from .helpers.services import ExtaLifeServices
@@ -744,6 +745,10 @@ class ExtaLifeChannel(Entity):
         for k, v in self.channel_data.items():                      # pylint: disable=unused-variable
             dev_class = MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS.get(k)
             if dev_class:
+
+                if not self.is_virt_sensor_allowed(k):
+                    continue
+
                 attr.append(
                     {
                         VIRT_SENSOR_DEV_CLS: dev_class,
@@ -757,6 +762,19 @@ class ExtaLifeChannel(Entity):
             attr.extend(platform_sensors)
 
         return attr
+
+    def is_virt_sensor_allowed(self, attr_name: str):
+        """Check if virtual sensor should be created for an attribute based on settings"""
+        from .sensor import VIRTUAL_SENSOR_RESTRICTIONS
+
+        channel = self.channel_data.get("channel")
+        restr = VIRTUAL_SENSOR_RESTRICTIONS.get(attr_name)
+
+        if restr:
+            if not (channel in restr.get(VIRT_SENSOR_ALLOWED_CHANNELS)):
+                return False
+
+        return True
 
     def push_virtual_sensor_channels(self, virtual_sensor_domain: str, channel_data: dict):
         """Push additional, virtual sensor channels for entity attributes. These should be
