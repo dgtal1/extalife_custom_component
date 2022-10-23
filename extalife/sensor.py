@@ -39,8 +39,12 @@ from .helpers.const import (
     VIRT_SENSOR_DEV_CLS,
     VIRT_SENSOR_PATH,
     VIRT_SENSOR_ALLOWED_CHANNELS,
+    VIRT_SENSOR_ALLOWED_DEVICES,
 )
+from .helpers.utils import Conv
+
 from .pyextalife import (           # pylint: disable=syntax-error
+    DEVICE_ARR_CLIMATE,
     DEVICE_ARR_SENS_ENERGY_METER,
     DEVICE_ARR_SENS_TEMP,
     DEVICE_ARR_SENS_LIGHT,
@@ -59,6 +63,7 @@ class ELSensorEntityDescription(SensorEntityDescription):
     key: str = ""
     factor: float = 1  # value scaling factor to have a value in normalized units like Watt, Volt etc
     value_path: str = "value_1"  # path to the value field in channel_data
+    conv_callback:str = False         # function
 
 class SensorEntityConfig():
     """ This class MUST correspond to class ELSensorEntityDescription.
@@ -68,6 +73,7 @@ class SensorEntityConfig():
         self.key: str = descr.key
         self.factor: float = descr.factor
         self.value_path: str = descr.value_path
+        self.conv_callback = descr.conv_callback
 
         self.native_unit_of_measurement: str = descr.native_unit_of_measurement
         self.device_class: str = descr.device_class
@@ -82,6 +88,8 @@ class ExtaSensorDeviceClass(StrEnum):
     REACTIVE_ENERGY = "reactive_energy"  # kvarh
     PHASE_SHIFT = "phase_shift"
     MANUAL_ENERGY = "manual_energy"
+    PERCENT = "percent"
+    UNIXTIMESTAMP = "unixtimestamp"
 
 
 MAP_EXTA_DEV_TYPE_TO_DEV_CLASS = {}
@@ -123,10 +131,14 @@ MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS = {
     "active_energy_solar": SensorDeviceClass.ENERGY,
     "reactive_energy_solar": ExtaSensorDeviceClass.REACTIVE_ENERGY,
     "manual_energy": ExtaSensorDeviceClass.MANUAL_ENERGY,
+    "valve_val": ExtaSensorDeviceClass.PERCENT,
+    "last_sync": SensorDeviceClass.DURATION,
 }
 
+# restrict creation of virtual attribute sensors in generic code of ExtaLifeEntity
 VIRTUAL_SENSOR_RESTRICTIONS = {
-  "battery_status": {VIRT_SENSOR_ALLOWED_CHANNELS: (1,)}
+  "battery_status": {VIRT_SENSOR_ALLOWED_CHANNELS: (1,)},
+  "last_sync": {VIRT_SENSOR_ALLOWED_DEVICES: DEVICE_ARR_CLIMATE}
 }
 
 # List of additional sensors which are created based on a property
@@ -224,6 +236,7 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
+        conv_callback=Conv.boolint_to_percent,
         factor=100,
     ),
     SensorDeviceClass.TEMPERATURE: ELSensorEntityDescription(
@@ -231,6 +244,17 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         factor=1,
+    ),
+    ExtaSensorDeviceClass.PERCENT: ELSensorEntityDescription(
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        factor=1,
+    ),
+    ExtaSensorDeviceClass.UNIXTIMESTAMP: ELSensorEntityDescription(
+        conv_callback = Conv.timestamp_to_datetime
+    ),
+    SensorDeviceClass.DURATION: ELSensorEntityDescription(
+        device_class=SensorDeviceClass.DURATION,
     ),
 }
 
@@ -297,8 +321,11 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
 
         value = self.get_value_from_attr_path(self._config.value_path)
 
-        if value:
-            value = value * self._config.factor
+        if value is not None:
+            if self._config.conv_callback:
+                value = self._config.conv_callback(value) * self._config.factor
+            else:
+                value = value * self._config.factor
 
         return value
 
@@ -350,6 +377,7 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
             return _find_element(_keys.split("."), dictionary)
 
         return find_element(path, self.channel_data)
+
 
 class ExtaLifeSensor(ExtaLifeSensorBase):
     """Representation of Exta Life Sensors"""

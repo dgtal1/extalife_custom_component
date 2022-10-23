@@ -44,9 +44,12 @@ from .pyextalife import (                   # pylint: disable=syntax-error
     PRODUCT_SERIES,
     PRODUCT_SERIES_EXTA_FREE,
     PRODUCT_CONTROLLER_MODEL,
+    ExtaLifeDeviceModel,
 )
 from .helpers.const import (
     DOMAIN,
+    CH_ADD_DATA,
+    CH_ADD_DATA_CONFIG,
     CONF_CONTROLLER_IP,
     CONF_USER,
     CONF_PASSWORD,
@@ -65,6 +68,7 @@ from .helpers.const import (
     OPTIONS_GENERAL,
     OPTIONS_GENERAL_POLL_INTERVAL,
     OPTIONS_GENERAL_DISABLE_NOT_RESPONDING,
+    VIRT_SENSOR_ALLOWED_DEVICES,
     VIRT_SENSOR_CHN_FIELD,
     VIRT_SENSOR_DEV_CLS,
     VIRT_SENSOR_PATH,
@@ -121,6 +125,7 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+GET_CONFIG_DEVICES = (ExtaLifeDeviceModel.RGT01,)
 
 async def async_migrate_entry(hass, config_entry: ConfigEntry):
     """Migrate old entry."""
@@ -390,6 +395,18 @@ class ChannelDataManager:
         # if connection error or other - will receive None
         # otherwise it contains a list of channels
         channels = await self.controller.async_get_channels()
+
+        # extend data model with additional data eg device config
+        for ch in channels:
+            data = ch["data"]
+            data.setdefault(CH_ADD_DATA, {})
+            if data["type"] in GET_CONFIG_DEVICES:
+                resp = await self.controller.async_get_channel_config(ch["id"])
+                if resp:
+                    ch_config = resp.get("data")
+                    data[CH_ADD_DATA][CH_ADD_DATA_CONFIG] = ch_config
+                    _LOGGER.debug("Extending channel %s data with config: %s", ch["id"], ch_config)
+
 
         if channels is None:
             _LOGGER.warning("No Channels could be obtained from the controller")
@@ -742,7 +759,7 @@ class ExtaLifeChannel(Entity):
         from .sensor import MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS
 
         attr = []
-        for k, v in self.channel_data.items():                      # pylint: disable=unused-variable
+        for k in self.channel_data.keys():
             dev_class = MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS.get(k)
             if dev_class:
 
@@ -768,10 +785,13 @@ class ExtaLifeChannel(Entity):
         from .sensor import VIRTUAL_SENSOR_RESTRICTIONS
 
         channel = self.channel_data.get("channel")
+        device  = self.channel_data.get("device")
         restr = VIRTUAL_SENSOR_RESTRICTIONS.get(attr_name)
 
         if restr:
-            if not (channel in restr.get(VIRT_SENSOR_ALLOWED_CHANNELS)):
+            if not (channel in restr.get(VIRT_SENSOR_ALLOWED_CHANNELS, (channel,)) ):
+                return False
+            if not (device in restr.get(VIRT_SENSOR_ALLOWED_DEVICES, (device,)) ):
                 return False
 
         return True

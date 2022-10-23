@@ -320,9 +320,12 @@ class Core:
         """Unload other, custom (pseudo)platforms"""
         package = ".".join(__package__.split(".")[:-1])  # 1 level above current package
         for platform, channels in self._platforms_cust.items():
-            module = importlib.import_module("." + platform, package=package)
-            func = getattr(module, "async_unload_entry")
-            await func(self._hass, self.config_entry)
+            try:
+                module = importlib.import_module("." + platform, package=package)
+                func = getattr(module, "async_unload_entry")
+                await func(self._hass, self.config_entry)
+            except ModuleNotFoundError:
+                pass
 
     def storage_add(self, id, inst):
         self._storage.update({id: inst})

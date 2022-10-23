@@ -191,7 +191,7 @@ DEVICE_ARR_LIGHT = [13, 26, 45, 27, 46]
 DEVICE_ARR_LIGHT_RGB = []  # RGB only
 DEVICE_ARR_LIGHT_RGBW = [27, 38]
 DEVICE_ARR_LIGHT_EFFECT = [27, 38]
-DEVICE_ARR_CLIMATE = [16]
+DEVICE_ARR_CLIMATE = (16,)
 DEVICE_ARR_REPEATER = [237]
 DEVICE_ARR_TRANS_REMOTE = [5,6,7,8,51,52,53]
 DEVICE_ARR_TRANS_NORMAL_BATTERY = [1,3,19]
@@ -256,6 +256,7 @@ class ExtaLifeAPI:
     # Commands
     CMD_LOGIN = 1
     CMD_CONTROL_DEVICE = 20
+    CMD_FETCH_RECEIVER_CONFIG = 25
     CMD_FETCH_RECEIVERS = 37
     CMD_FETCH_SENSORS = 38
     CMD_FETCH_TRANSMITTERS = 39
@@ -573,6 +574,29 @@ class ExtaLifeAPI:
                     }
                     channels.append(channel)
         return channels
+
+    async def async_get_channel_config(self, channel_id: str):
+        """
+        Get receiver config
+        channel_id = API channel id e.g. 10-1
+        """
+        ch_id, channel = channel_id.split("-")
+        cmd = self.CMD_FETCH_RECEIVER_CONFIG
+
+        try:
+            cmd_data = {
+                "id": ch_id,
+                "channel": channel,
+            }
+            # resp = await self._connection.async_execute_command(cmd, cmd_data)
+            from .fake_channels import FAKE_CMD25_RGT01
+            resp = FAKE_CMD25_RGT01
+
+            return resp
+
+        except TCPCmdError:
+            _LOGGER.error("Command %s could not be executed", cmd)
+            return None
 
     async def async_execute_action(self, action, channel_id, **fields):
         """Execute action/command in controller

@@ -56,12 +56,19 @@ VIRT_SENSOR_DEV_CLS = "device_class"
 VIRT_SENSOR_UNIT = "unit"
 VIRT_SENSOR_FACTOR = "factor"
 VIRT_SENSOR_NAME_SUFFIX = "name_suffix"
+VIRT_SENSOR_CONV_CALLBACK = "conv_callback"
 
 # virtual sensor channel data field
 VIRT_SENSOR_CHN_FIELD = "_virtual_sensor"
 
 # sensor restrictions
 VIRT_SENSOR_ALLOWED_CHANNELS = "allowed_channels"
+VIRT_SENSOR_ALLOWED_DEVICES = "allowed_devices"
+
+# channel data model
+CH_ADD_DATA = "_additional_data"
+CH_ADD_DATA_CONFIG = "config"
+
 
 # events and devices
 CONF_EXTALIFE_EVENT_UNIQUE_ID = "unique_id"

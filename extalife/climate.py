@@ -1,7 +1,6 @@
 import logging
 from pprint import pformat
 
-# from homeassistant.components.extalife import ExtaLifeChannel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, DOMAIN as DOMAIN_CLIMATE
@@ -12,9 +11,25 @@ from homeassistant.components.climate.const import (
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import ExtaLifeChannel
-from .helpers.const import DOMAIN_VIRTUAL_CLIMATE_SENSOR
+from .helpers.const import (
+    CH_ADD_DATA_CONFIG,
+    CH_ADD_DATA,
+    DOMAIN_VIRTUAL_CLIMATE_SENSOR,
+    VIRT_SENSOR_CONV_CALLBACK,
+    VIRT_SENSOR_DEV_CLS,
+    VIRT_SENSOR_PATH,
+)
 from .helpers.core import Core
+from .helpers.utils import Conv
 from .pyextalife import ExtaLifeAPI             # pylint: disable=syntax-error
+from .sensor import MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS
+
+
+MAP_ATTR_TO_CONV_CALLBACK = {
+    "valve_val": Conv.invert_percentage,
+    "battery_status": Conv.bool_to_percent,
+}
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -148,6 +163,27 @@ class ExtaLifeClimate(ExtaLifeChannel, ClimateEntity):
             self.channel_data["value"] = temp_el
             self.channel_data["work_mode"] = HVAC_MODE_EXTA[HVACMode.HEAT]
             self.async_schedule_update_ha_state()
+
+    @property
+    def virtual_sensors(self) -> list:
+        """List of config dicts"""
+        attr = []
+        # return attribute + unit pairs
+        data = self.channel_data
+        config = data.get(CH_ADD_DATA).get(CH_ADD_DATA_CONFIG)
+        if config:
+            for k in config.keys():
+                dev_class = MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS.get(k)
+                if dev_class:
+                    attr.append(
+                        {
+                            VIRT_SENSOR_DEV_CLS: dev_class,
+                            VIRT_SENSOR_PATH: f"{CH_ADD_DATA}[{CH_ADD_DATA_CONFIG}].{k}",
+                            VIRT_SENSOR_CONV_CALLBACK: MAP_ATTR_TO_CONV_CALLBACK.get(k, None)
+                        }
+                    )
+
+        return attr
 
     @property
     def extra_state_attributes(self):
