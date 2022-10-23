@@ -403,7 +403,7 @@ class ChannelDataManager:
             if data["type"] in GET_CONFIG_DEVICES:
                 resp = await self.controller.async_get_channel_config(ch["id"])
                 if resp:
-                    ch_config = resp.get("data")
+                    ch_config = resp[0].get("data")
                     data[CH_ADD_DATA][CH_ADD_DATA_CONFIG] = ch_config
                     _LOGGER.debug("Extending channel %s data with config: %s", ch["id"], ch_config)
 
