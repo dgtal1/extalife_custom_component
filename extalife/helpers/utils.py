@@ -9,12 +9,12 @@ class Conv():
     @staticmethod
     def bool_to_percent(value: bool) -> int:
         """ convert boolean value to percent: 0 or 100 use case: e.g. battery sensor attribute"""
-        return 100 if value else 0
+        return 0 if value else 1
 
     @staticmethod
     def boolint_to_percent(value) -> int:
         """ normalize value (int or bool) to percent: 0 or 100 use case: e.g. battery sensor attribute"""
-        return value if isinstance(value, int) else __class__.bool_to_percent(value)
+        return value if not isinstance(value, bool) else Conv.bool_to_percent(value)
 
     @staticmethod
     def timestamp_to_datetime(value: int) -> int:
