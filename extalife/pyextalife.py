@@ -585,8 +585,8 @@ class ExtaLifeAPI:
 
         try:
             cmd_data = {
-                "id": ch_id,
-                "channel": channel,
+                "id": int(ch_id),
+                "channel": int(channel),
             }
             resp = await self._connection.async_execute_command(cmd, cmd_data)
             #from .fake_channels import FAKE_CMD25_RGT01
