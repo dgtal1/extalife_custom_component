@@ -251,7 +251,7 @@ class Core:
         return self._config_entry
 
     @property
-    def hass(self) -> HomeAssistantType():
+    def hass(self):
         return Core._hass
 
     @property
