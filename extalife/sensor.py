@@ -7,11 +7,6 @@ from datetime import (
 )
 from decimal import Decimal
 from enum import StrEnum
-from typing import (
-    Any,
-    Mapping,
-)
-
 from homeassistant.components.sensor import (
     DOMAIN as DOMAIN_SENSOR,
     SensorDeviceClass,
@@ -30,7 +25,7 @@ from homeassistant.const import (
     UnitOfFrequency,
     UnitOfPower,
     UnitOfSpeed,
-    POWER_VOLT_AMPERE_REACTIVE,
+    UnitOfReactivePower,
     UnitOfApparentPower,
     UnitOfEnergy,
     LIGHT_LUX,
@@ -39,6 +34,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import (
     StateType,
+)
+from typing import (
+    Any,
+    Mapping,
 )
 
 from .helpers.const import (
@@ -195,7 +194,7 @@ SENSOR_TYPES: dict[SensorDeviceClass | ExtaSensorDeviceClass, ELSensorEntityDesc
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorDeviceClass.REACTIVE_POWER: ELSensorEntityDescription(
-        native_unit_of_measurement=POWER_VOLT_AMPERE_REACTIVE,
+        native_unit_of_measurement=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
