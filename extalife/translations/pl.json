@@ -69,7 +69,7 @@
   "options": {
     "step": {
       "general": {
-        "title": "Konfiguracja \"{title}\": krok 1 z 3",
+        "title": "Konfiguracja \"{title}\": krok {step_no} z {step_total}",
         "description": "Ustawienia ogólne",
         "data": {
           "poll_interval": "Czas pomiędzy odpytaniem EFC o stan urządzeń (minuty)",
@@ -78,7 +78,7 @@
         }
       },
       "light": {
-        "title": "Konfiguracja \"{title}\": krok 2 z 3",
+        "title": "Konfiguracja \"{title}\": krok {step_no} z {step_total}",
         "description": "Ustawienia dla encji świateł (platforma: light)",
         "data": {
           "icons_list": "Lista numerów ikon urządzeń ROP/ROM"
@@ -88,7 +88,7 @@
         }
       },
       "cover": {
-        "title": "Konfiguracja \"{title}\": krok 3 z 3",
+        "title": "Konfiguracja \"{title}\": krok {step_no} z {step_total}",
         "description": "Ustawienia dla rolet (platforma: cover)",
         "data": {
           "inverted_control": "Odwróć sterowanie roletami w GUI Home Assistant (suwak w pozycji 100 oznacza roletę zamkniętą),\naby przypominało sterowanie z aplikacji Exta Life"

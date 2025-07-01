@@ -108,6 +108,7 @@ OPTIONS_CONF_SCHEMA = {
     },
 }
 
+# CONFIG_SCHEMA = {}
 
 # noinspection PyUnusedLocal
 async def async_migrate_entry(
@@ -180,7 +181,7 @@ async def async_setup_entry(
 
     integration: Integration = await async_get_integration(hass, DOMAIN)
     Core.create(hass, integration, config_entry)
-
+    config_entry.runtime_data = Core
     result = await async_initialize(hass, config_entry)
 
     _LOGGER.debug(f"async_setup_entry: finished for '{config_entry.title}' (entry_id='{config_entry.entry_id}')")

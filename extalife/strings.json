@@ -4,11 +4,11 @@
     "step": {
       "confirm": {
         "description": "Do you want to set up integration with Exta Life controller (EFC-01) and discover your devices?",
-        "title": "Connection to EFC-01 controller "
+        "title": "Connection to EFC-01 controller"
       },
       "init": {
         "title": "Enter the connection parameters to EFC-01 controller",
-        "description": "Your Exta Life devices will be auto-detected after we connect to EFC-01\n\n {error_info} ",
+        "description": "Your Exta Life devices will be auto-detected after we connect to EFC-01\n\n {error_info}",
         "data": {
           "controller_ip": "DNS or IP address of EFC-01 controller. Use \":\" to specify port number.",
           "user": "User",
@@ -64,7 +64,7 @@
   "options": {
     "step": {
       "general": {
-        "title": "Configuration \"{title}\": step 1 of 3",
+        "title": "Configuration \"{title}\": step {step_no} of {step_total}",
         "description": "General settings",
         "data": {
           "poll_interval": "Status polling interval",
@@ -73,7 +73,7 @@
         }
       },
       "light": {
-        "title": "Configuration \"{title}\": step 2 of 3",
+        "title": "Configuration \"{title}\": step {step_no} of {step_total}",
         "description": "Settings for lights",
         "data": {
           "icons_list": "List of ROP/ROM icons to map"
@@ -83,7 +83,7 @@
         }
       },
       "cover": {
-        "title": "Configuration \"{title}\": step 3 of 3",
+        "title": "Configuration \"{title}\": step {step_no} of {step_total}",
         "description": "Settings for covers",
         "data": {
           "inverted_control": "Invert control of roller shutters as in Exta Life app"
