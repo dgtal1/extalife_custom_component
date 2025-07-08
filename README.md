@@ -6,6 +6,9 @@
 </div>
 <p></p>
 
+# Please use the forked version until further notice: https://github.com/gadulowaty/ha-extalife
+
+
 ZAMEL Exta Life integration with Home Assistant based on custom component.
 ### Supported devices
 * Switches: ROP-21, ROP-22, ROM-24
