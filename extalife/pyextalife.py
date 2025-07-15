@@ -565,7 +565,7 @@ class ExtaLifeAPI:
 
                 dev.pop("state")
                 for state in device["state"]:
-                    ch_no = state.get("channel", def_channel) if def_channel else state["channel"]      # pylint: disable=unused-variable
+                    ch_no = state.get("channel", def_channel)      # pylint: disable=unused-variable
                     channel = {
                         # API channel, not TCP channel
                         "id": str(device["id"]) + "-" + str(state.get("channel", def_channel)),
