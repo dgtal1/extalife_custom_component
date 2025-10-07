@@ -43,6 +43,7 @@ from .helpers.const import (
     CONF_VER_INTERVAL,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_VER_INTERVAL,
+    DEFAULT_RECV_TIMEOUT,
     OPTIONS_COVER_INVERTED_CONTROL,
     SIGNAL_DATA_UPDATED,
     DOMAIN_TRANSMITTER,
@@ -250,7 +251,7 @@ async def async_initialize(hass: HomeAssistant, config_entry: ConfigEntry) -> bo
     username: str = config_entry.data[CONF_USERNAME]
     password: str = config_entry.data[CONF_PASSWORD]
     controller_ip: str = config_entry.data[CONF_CONTROLLER_IP]
-    recv_timeout: int = config_entry.data[CONF_RECV_TIMEOUT]
+    recv_timeout: int = config_entry.data.get(CONF_RECV_TIMEOUT, DEFAULT_RECV_TIMEOUT)
 
     _LOGGER.debug(f"[{config_entry.title}] exta life initializing '{config_entry.title}'... "
                   f"[Debugger attached: {"YES" if ExtaLifeAPI.is_debugger_active() else "NO"}]")
