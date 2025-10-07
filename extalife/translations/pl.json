@@ -11,11 +11,13 @@
         "description": "Twoje urządzenia Exta Life zostaną wyszukane po podłączeniu do kontrolera EFC-01\n\n {error_info} ",
         "data": {
           "controller_ip": "Adres kontrolera EFC-01",
+          "recv_timeout": "Maks. czas oczekiwania na odpowiedź",
           "user": "Użytkownik",
           "password": "Hasło"
         },
         "data_description": {
           "controller_ip": "Adres DNS lub IP kontrolera EFC-01. Użyj znaku dwukropka, aby podać port kontrolera.",
+          "recv_timeout": "Maksymalny czas oczekiwania na odpowiedź po wysłaniu polecenia do kontrolera EFC-01 przez integrację. Domyślnie jest to 5 sekund, jednak w przypadku jeżeli w systemie funkcjonuje REP-21 naleźy ten czas wydłużyć do 10-15 sekund",
           "user": "Nazwa użytkownika, która będzie wykorzystywana do logowania do kontrolera EFC-01",
           "password": "Hasło użytkownika, które będzie wykorzystywane do logowania do kontrolera EFC-01"
         }
@@ -25,11 +27,13 @@
         "description": "Aktualne ustawienia twojego kontrolera EFC-01",
         "data": {
           "controller_ip": "Adres kontrolera EFC-01",
+          "recv_timeout": "Maks. czas oczekiwania na odpowiedź",
           "user": "Użytkownik",
           "password": "Hasło"
         },
         "data_description": {
           "controller_ip": "Adres DNS lub IP kontrolera EFC-01. Użyj znaku dwukropka, aby podać port kontrolera.",
+          "recv_timeout": "Maksymalny czas oczekiwania na odpowiedź po wysłaniu polecenia do kontrolera EFC-01 przez integrację. Domyślnie jest to 5 sekund, jednak w przypadku jeżeli w systemie funkcjonuje REP-21 naleźy ten czas wydłużyć do 10-15 sekund",
           "user": "Nazwa użytkownika, która będzie wykorzystywana do logowania do kontrolera EFC-01",
           "password": "Hasło użytkownika, które będzie wykorzystywane do logowania do kontrolera EFC-01"
         }

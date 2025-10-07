@@ -179,8 +179,8 @@ class ExtaLifeClimateNamed(ExtaLifeChannelNamed, ClimateEntity):
         """Return device specific state attributes."""
         es_attr: dict[str, Any] = self._mapping_to_dict(super().extra_state_attributes)
         ch_data: dict[str, Any] = self.channel_data
-        self._extra_state_attributes_update(ch_data, es_attr, "waiting_to_synchronize")
-        self._extra_state_attributes_update(ch_data, es_attr, "temperature_old")
+        self._extra_state_attribute_update(ch_data, es_attr, "waiting_to_synchronize")
+        self._extra_state_attribute_update(ch_data, es_attr, "temperature_old")
         return es_attr
 
     def on_state_notification(self, data: dict[str, Any]) -> None:

@@ -11,11 +11,13 @@
         "description": "Your Exta Life devices will be auto-detected after we connect to EFC-01\n\n {error_info}",
         "data": {
           "controller_ip": "EFC-01 controller address",
+          "recv_timeout": "Max waiting time for a response",
           "user": "User",
           "password": "Password"
         },
         "data_description": {
           "controller_ip": "DNS or IP address of EFC-01 controller. Use \":\" to specify port number.",
+          "recv_timeout": "Maximum waiting time for a response from EFC-01 controller after sending command",
           "user": "Username that should be used to log into EFC-01 controller",
           "password": "User password that should be used to log into EFC-01 controller"
         }
@@ -25,11 +27,13 @@
         "description": "Your EFC-01 controller current settings",
         "data": {
           "controller_ip": "EFC-01 controller address",
+          "recv_timeout": "Max waiting time for a response",
           "user": "User",
           "password": "Password"
         },
         "data_description": {
           "controller_ip": "DNS or IP address of EFC-01 controller. Use \":\" to specify port number.",
+          "recv_timeout": "Maximum waiting time for a response from EFC-01 controller after sending command",
           "user": "Username that should be used to log into EFC-01 controller",
           "password": "User password that should be used to log into EFC-01 controller"
         }

@@ -38,6 +38,7 @@ from .helpers.const import (
     CONF_CONTROLLER_IP,
     CONF_USERNAME,
     CONF_PASSWORD,
+    CONF_RECV_TIMEOUT,
     CONF_POLL_INTERVAL,
     CONF_VER_INTERVAL,
     DEFAULT_POLL_INTERVAL,
@@ -246,9 +247,10 @@ async def async_initialize(hass: HomeAssistant, config_entry: ConfigEntry) -> bo
     core = Core.get(config_entry.entry_id)
 
     controller = core.api
-    username = config_entry.data[CONF_USERNAME]
-    password = config_entry.data[CONF_PASSWORD]
+    username: str = config_entry.data[CONF_USERNAME]
+    password: str = config_entry.data[CONF_PASSWORD]
     controller_ip: str = config_entry.data[CONF_CONTROLLER_IP]
+    recv_timeout: int = config_entry.data[CONF_RECV_TIMEOUT]
 
     _LOGGER.debug(f"[{config_entry.title}] exta life initializing '{config_entry.title}'... "
                   f"[Debugger attached: {"YES" if ExtaLifeAPI.is_debugger_active() else "NO"}]")
@@ -266,7 +268,7 @@ async def async_initialize(hass: HomeAssistant, config_entry: ConfigEntry) -> bo
     # try to connect and logon to controller
     try:
         await controller.async_connect(username, password, controller_host, controller_port,
-                                       timeout=5.0, autodiscover=autodiscover)
+                                       conn_timeout=5.0, recv_timeout=recv_timeout, autodiscover=autodiscover)
 
     except ExtaLifeError as err:
         if isinstance(err, ExtaLifeCmdError):

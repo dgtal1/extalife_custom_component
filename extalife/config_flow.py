@@ -33,8 +33,10 @@ from .helpers.const import (
     CONF_CONTROLLER_IP,
     CONF_USERNAME,
     CONF_PASSWORD,
+    CONF_RECV_TIMEOUT,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_VER_INTERVAL,
+    DEFAULT_RECV_TIMEOUT,
     OPTIONS_LIGHT,
     OPTIONS_GENERAL,
     OPTIONS_COVER,
@@ -94,6 +96,7 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
         self._controller_mac: str = ""
         self._username: str = ""
         self._password: str = ""
+        self._recv_timeout: int = DEFAULT_RECV_TIMEOUT
 
     async def _async_exta_life_check( self ) -> str | None:
         """Test Exta Life connection params"""
@@ -106,7 +109,7 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
         # noinspection PyBroadException
         try:
             await controller.async_connect( self._username, self._password, controller_host, controller_port,
-                                            timeout=5.0 )
+                                            conn_timeout=5.0, recv_timeout=self._recv_timeout )
             self._controller_name = controller.name
             self._controller_mac = controller.mac
 
@@ -168,13 +171,16 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
             password: str = user_input[ CONF_PASSWORD ] if user_input else self._import_data[ CONF_PASSWORD ]
             self._password = password
 
+            recv_timeout: int = user_input[ CONF_RECV_TIMEOUT ] if user_input else self._import_data[ CONF_RECV_TIMEOUT ]
+            self._recv_timeout = recv_timeout
+
             # Test connection on this IP - get instance: this will already try to connect and logon
             controller = ExtaLifeAPI( self.hass.loop )
 
             controller_host, controller_port = ExtaLifeConnParams.get_host_and_port( controller_addr )
 
             try:
-                await controller.async_connect( username, password, controller_host, controller_port, timeout=5.0 )
+                await controller.async_connect( username, password, controller_host, controller_port, conn_timeout=5.0, recv_timeout=self._recv_timeout )
                 self._controller_name = controller.name
 
                 self._user_input = user_input
@@ -211,11 +217,21 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
             finally:
                 await controller.async_disconnect()  # if we won't do this - it will run forever and ping
 
+        recv_timeout_selector = vol.All(
+                NumberSelector(
+                        NumberSelectorConfig(
+                                mode=NumberSelectorMode.BOX, min=5, max=45, step=1, unit_of_measurement="seconds"
+                        )
+                ),
+                vol.Coerce( int )
+        )
+
         return self.async_show_form(
                 step_id="init",
                 data_schema=vol.Schema(
                         {
                             vol.Required( CONF_CONTROLLER_IP, default=controller_addr ): str,
+                            vol.Required( CONF_RECV_TIMEOUT, default=self._recv_timeout ): recv_timeout_selector,
                             vol.Required( CONF_USERNAME, default=self._username ): str,
                             vol.Required( CONF_PASSWORD, default=self._password ): str,
                         }
@@ -231,6 +247,7 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
         self._controller_addr = entry_data[ CONF_CONTROLLER_IP ]
         self._username = entry_data[ CONF_USERNAME ]
         self._password = entry_data[ CONF_PASSWORD ]
+        self._recv_timeout = entry_data[ CONF_RECV_TIMEOUT ]
 
         return await self.async_step_reauth_confirm()
 
@@ -271,6 +288,7 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
                     CONF_CONTROLLER_IP: self._controller_addr,
                     CONF_USERNAME: self._username,
                     CONF_PASSWORD: self._password,
+                    CONF_RECV_TIMEOUT: self._recv_timeout,
                 },
         )
         await self.hass.config_entries.async_reload( self._entry.entry_id )
@@ -286,6 +304,7 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
         self._controller_addr = self._entry.data.get( CONF_CONTROLLER_IP, "" )
         self._username = self._entry.data.get( CONF_USERNAME, "" )
         self._password = self._entry.data.get( CONF_PASSWORD, "" )
+        self._recv_timeout = self._entry.data.get( CONF_RECV_TIMEOUT, DEFAULT_RECV_TIMEOUT)
 
         return await self.async_step_reconfigure_confirm( user_input )
 
@@ -296,12 +315,23 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
         default_controller_ip = user_input.get( CONF_CONTROLLER_IP, "" )
         default_username = user_input.get( CONF_USERNAME, "" )
         default_password = user_input.get( CONF_PASSWORD, "" )
+        default_recv_timeout = user_input.get( CONF_RECV_TIMEOUT, DEFAULT_RECV_TIMEOUT )
+
+        recv_timeout_selector = vol.All(
+                NumberSelector(
+                        NumberSelectorConfig(
+                                mode=NumberSelectorMode.BOX, min=5, max=45, step=1, unit_of_measurement="seconds"
+                        )
+                ),
+                vol.Coerce( int )
+        )
 
         return self.async_show_form(
                 step_id="reconfigure_confirm",
                 data_schema=vol.Schema(
                         {
                             vol.Optional( CONF_CONTROLLER_IP, default=default_controller_ip ): str,
+                            vol.Required( CONF_RECV_TIMEOUT, default=default_recv_timeout ): recv_timeout_selector,
                             vol.Required( CONF_USERNAME, default=default_username, description={ "suggested_value": "root" } ): str,
                             vol.Required( CONF_PASSWORD, default=default_password ): str
                         }
@@ -319,13 +349,15 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
                     {
                         CONF_CONTROLLER_IP: self._controller_addr,
                         CONF_USERNAME: self._username,
-                        CONF_PASSWORD: self._password
+                        CONF_PASSWORD: self._password,
+                        CONF_RECV_TIMEOUT: self._recv_timeout,
                     }
             )
 
         self._controller_addr = user_input[ CONF_CONTROLLER_IP ]
         self._username = user_input[ CONF_USERNAME ]
         self._password = user_input[ CONF_PASSWORD ]
+        self._recv_timeout = user_input[ CONF_RECV_TIMEOUT ]
 
         core = Core.get( self.context[ "entry_id" ] )
 
@@ -345,6 +377,7 @@ class ExtaLifeFlowHandler( ConfigFlow, domain=DOMAIN ):
                     CONF_CONTROLLER_IP: self._controller_addr,
                     CONF_USERNAME: self._username,
                     CONF_PASSWORD: self._password,
+                    CONF_RECV_TIMEOUT: self._recv_timeout,
                 },
         )
         await self.hass.config_entries.async_reload( self._entry.entry_id )

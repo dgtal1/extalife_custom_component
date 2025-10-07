@@ -35,8 +35,6 @@ from typing import (
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_RESP_TIMEOUT = 5.0
-
 # controller info
 PRODUCT_MANUFACTURER = "ZAMEL"
 PRODUCT_SERIES_EXTA_LIFE = "Exta Life"
@@ -858,6 +856,7 @@ class ExtaLifeAPI:
         self._ver_check_next = 0
         self._host: str = ""
         self._port: int = 0
+        self._recv_timeout: float = 5.0
         self._username: str = ""
         self._password: str = ""
         self._connection: ExtaLifeConn | None = None
@@ -1079,6 +1078,7 @@ class ExtaLifeAPI:
         self._connection = sender
         self._host = sender.host
         self._port = sender.port
+        self._recv_timeout = sender.recv_timeout
         self._username = sender.username
         self._password = sender.password
 
@@ -1114,7 +1114,10 @@ class ExtaLifeAPI:
         if self._on_connect_callback is not None:
             await self._on_connect_callback()
 
-        _LOGGER.info(f"Controller EFC-01 {self.host}:{self.port} is now connected")
+        if self.is_connected:
+            _LOGGER.info(f"Controller EFC-01 {self.host}:{self.port} is now connected")
+        else:
+            _LOGGER.warn( f"Controller EFC-01 {self.host}:{self.port} is not connected, probably command recv timeout occured. Will try later" )
 
     # noinspection PyUnusedLocal
     async def _async_do_conn_disconnected(self, sender: ExtaLifeConnType, should_reconnect: bool) -> None:
@@ -1172,7 +1175,7 @@ class ExtaLifeAPI:
             return None
 
     async def async_exec_command(
-            self, command: ExtaLifeCmd, data: ExtaLifeData | None = None, timeout: float = DEFAULT_RESP_TIMEOUT
+            self, command: ExtaLifeCmd, data: ExtaLifeData | None = None, resp_timeout: float = -1.0
     ) -> ExtaLifeResponse | None:
         # TODO: Missing one-liner
 
@@ -1182,7 +1185,7 @@ class ExtaLifeAPI:
 
         try:
             return ExtaLifeAPI.check_success(
-                await self._connection.async_exec_command(command, data, timeout),
+                await self._connection.async_exec_command(command, data, resp_timeout),
                 False
             )
         except ExtaLifeError as err:
@@ -1191,17 +1194,17 @@ class ExtaLifeAPI:
 
     async def async_connect(self, username: str, password: str,
                             host: str | None = None, port: int = 0,
-                            timeout: float = 30.0, autodiscover: bool = False) -> ExtaLifeData:
+                            conn_timeout: float = 30.0, recv_timeout: float = 5.0, autodiscover: bool = False) -> ExtaLifeData:
         """Connect & authenticate to the controller using user and password parameters"""
 
         async def _async_connect_tcp(_host: str | None = None, _port: int = 0) -> ExtaLifeConn:
 
-            conn_params: ExtaLifeConnParams = ExtaLifeConnParams(_host, _port, self._loop)
+            conn_params: ExtaLifeConnParams = ExtaLifeConnParams(_host, _port, recv_timeout, self._loop)
             conn_params.on_event_callback = self._async_do_conn_event_callback
 
             tcp_conn = ExtaLifeConn(conn_params)
             try:
-                await tcp_conn.async_connect(timeout)
+                await tcp_conn.async_connect(conn_timeout)
 
             except Exception as conn_err:
                 await tcp_conn.async_disconnect()
@@ -1235,7 +1238,7 @@ class ExtaLifeAPI:
         """ Reconnect with existing connection parameters """
 
         try:
-            await self.async_connect(self.username, self.password, self.host, self.port, timeout=10.0)
+            await self.async_connect(self.username, self.password, self.host, self.port, recv_timeout=self.recv_timeout, conn_timeout=10.0)
         except ExtaLifeConnError as err:
             _LOGGER.warning(f"reconnect to EFC-01 at address {self.host} at port {self.port} failed, {err}")
 
@@ -1457,6 +1460,10 @@ class ExtaLifeAPI:
         return self._port
 
     @property
+    def recv_timeout(self) -> float:
+        return self._recv_timeout
+
+    @property
     def username(self) -> str:
         return self._username
 
@@ -1632,11 +1639,12 @@ class ExtaLifeConnParams:
 
         return host, port
 
-    def __init__(self, host: str, port: int, eventloop: AbstractEventLoop, keepalive: float = 8):
+    def __init__(self, host: str, port: int, recv_timeout: float, eventloop: AbstractEventLoop, keepalive: float = 8):
 
         self._eventloop: AbstractEventLoop = eventloop
         self._host: str = host
         self._port: int = port if (port > 0) and (port <= 65535) else self.EFC01_DEFAULT_PORT
+        self._recv_timeout: float = recv_timeout
         self._keepalive: float = keepalive
 
         self.on_event_callback: Callable[[ExtaLifeConnType, ExtaLifeEvent, Any], Awaitable] | None = None
@@ -1648,6 +1656,10 @@ class ExtaLifeConnParams:
     @property
     def port(self) -> int:
         return self._port
+
+    @property
+    def recv_timeout(self) -> float:
+        return self._recv_timeout
 
     @property
     def keepalive(self) -> float:
@@ -1674,6 +1686,7 @@ class ExtaLifeConn:
         self._eventloop: AbstractEventLoop = params.eventloop
         self._host: str = params.host
         self._port: int = params.port
+        self._recv_timeout: float = params.recv_timeout
 
         self._local_addr: str = ""
         self._local_port: int = -1
@@ -1837,9 +1850,12 @@ class ExtaLifeConn:
         await self._async_post_data(request_data)
 
     async def _async_send_request(
-            self, request: ExtaLifeRequest, timeout: float = DEFAULT_RESP_TIMEOUT
+            self, request: ExtaLifeRequest, resp_timeout: float
     ) -> list[ExtaLifeResponse]:
         """ Send message to controller and await response """
+
+        if resp_timeout < 0:
+            resp_timeout = self.recv_timeout
 
         # prevent controller overloading and command loss - wait until finished (lock released)
         async with self._cmd_exec_lock:
@@ -1873,12 +1889,12 @@ class ExtaLifeConn:
 
             while True:
                 try:
-                    await asyncio.wait_for(response_reader, timeout)
+                    await asyncio.wait_for(response_reader, resp_timeout)
                     break
 
                 except AsyncTimeoutError:
                     now_timeout = datetime.now().timestamp()
-                    if (now_timeout - last_response) - 0.3 > timeout:
+                    if (now_timeout - last_response) - 0.3 > resp_timeout:
                         await self._async_close(ExtaLifeConn.CloseSource.REQUEST)
                         raise ExtaLifeConnError("send_request failed, timeout while waiting for API response") from None
                     else:
@@ -1897,11 +1913,11 @@ class ExtaLifeConn:
         await self._async_post_request(ExtaLifeRequest(command, data))
 
     async def async_exec_command(
-            self, command: ExtaLifeCmd, data: ExtaLifeData | None = None, timeout: float = DEFAULT_RESP_TIMEOUT
+            self, command: ExtaLifeCmd, data: ExtaLifeData | None = None, resp_timeout: float = -1.0
     ) -> ExtaLifeResponse:
 
         request = ExtaLifeRequest(command, data)
-        responses = await self._async_send_request(request, timeout)
+        responses = await self._async_send_request(request, resp_timeout)
         if len(responses) == 0:
             raise ExtaLifeConnError("exec_command failed, no response received from Controller")
 
@@ -1993,6 +2009,10 @@ class ExtaLifeConn:
     @property
     def port(self) -> int:
         return self._port
+
+    @property
+    def recv_timeout(self) -> float:
+        return self._recv_timeout
 
     @property
     def username(self) -> str:
