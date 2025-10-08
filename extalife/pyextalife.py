@@ -1051,7 +1051,8 @@ class ExtaLifeAPI:
             await asyncio.sleep(reconnect)
             if not self.is_connected:
                 try:
-                    await self.async_connect(self.username, self.password, self.host, self.port, timeout=5.0)
+                    _LOGGER.debug( f"Reconnect, restoring connection to {self.host} with recv timeout {self.recv_timeout} seconds..." )
+                    await self.async_connect(self.username, self.password, self.host, self.port, recv_timeout=self.recv_timeout, conn_timeout=5.0)
                     break
 
                 except asyncio.CancelledError:
@@ -1061,6 +1062,8 @@ class ExtaLifeAPI:
                 except ExtaLifeError as err:
                     _LOGGER.warning(f"Reconnect failed will try later, {err}")
                     continue
+            else:
+                _LOGGER.warning(f"Reconnect skipped, flag is_connected is True")
         return
 
     async def _async_do_conn_connected(self, sender: ExtaLifeConnType) -> None:
