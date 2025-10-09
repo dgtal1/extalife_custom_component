@@ -7,6 +7,11 @@ from datetime import (
 )
 from decimal import Decimal
 from enum import StrEnum
+from typing import (
+    Any,
+    Mapping,
+)
+
 from homeassistant.components.sensor import (
     DOMAIN as DOMAIN_SENSOR,
     SensorDeviceClass,
@@ -35,10 +40,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import (
     StateType,
 )
-from typing import (
-    Any,
-    Mapping,
-)
 
 from .helpers.const import (
     DOMAIN_VIRTUAL_SENSORS,
@@ -46,7 +47,9 @@ from .helpers.const import (
     VIRTUAL_SENSOR_CHN_FIELD,
     VIRTUAL_SENSOR_DEV_CLS,
     VIRTUAL_SENSOR_PATH,
+    VIRTUAL_SENSOR_FACTOR,
     VIRTUAL_SENSOR_ALLOWED_CHANNELS,
+    DOMAIN_VIRTUAL_CLIMATE_SENSOR,
 )
 from .helpers.core import Core
 from .helpers.entities import ExtaLifeChannelNamed
@@ -463,15 +466,21 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBaseNamed):
         # base constructor must be called here after _virtual_prop assignment
         super().__init__(channel, config_entry, self._virtual_prop.get(VIRTUAL_SENSOR_DEV_CLS))
 
-        self.override_config_from_dict(self._virtual_prop)
+        self.override_config_from_dict(virtual_domain, self._virtual_prop)
 
-    def override_config_from_dict(self, override: dict[str, Any]) -> None:
+    def override_config_from_dict(self, virtual_domain:str, override: dict[str, Any]) -> None:
         """Override sensor config from a dict"""
         for k, v in override.items():           # pylint: disable=unused-variable
+            if virtual_domain == DOMAIN_VIRTUAL_CLIMATE_SENSOR:
+                if k == VIRTUAL_SENSOR_PATH:
+                    v = "battery"
             setattr(self._config, k, v)
 
+        if virtual_domain == DOMAIN_VIRTUAL_CLIMATE_SENSOR:
+            setattr(self._config, VIRTUAL_SENSOR_FACTOR, 1)
+
     def _get_unique_id(self) -> str:
-        """Override return a unique ID.
+        """Override return a uniqu  e ID.
         This will add channel attribute path to uniquely identify the entity"""
 
         super_id = super()._get_unique_id()
