@@ -56,7 +56,7 @@ class PseudoPlatform:
             "name": f"{PRODUCT_MANUFACTURER} {PRODUCT_SERIES_EXTA_LIFE} {model_name}",
             "manufacturer": PRODUCT_MANUFACTURER,
             "model": model_name,
-            "serial_number": f"{serial_no:06X}",
+            "serial_number": f"{serial_no:06X} ({serial_no})",
             "via_device": (DOMAIN, self.controller.mac),
         }
 

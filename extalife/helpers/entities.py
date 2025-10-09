@@ -144,7 +144,7 @@ class ExtaLifeEntity(Entity):
             name=f"{PRODUCT_MANUFACTURER} {prod_series} {self.device_model_name}",
             manufacturer=PRODUCT_MANUFACTURER,
             model=self.device_model_name,
-            serial_number=f"{serial_no:06X}"
+            serial_number=f"{serial_no:06X} ({serial_no})"
         )
         if not self.is_exta_free and self.device_model not in DEVICE_ARR_ALL_TRANSMITTER:
             device_info.setdefault("configuration_url", f"{URL_FIRMWARE_HTML}?device={self.device_model.name}")
