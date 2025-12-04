@@ -23,7 +23,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfFrequency,
     UnitOfPower,
-    POWER_VOLT_AMPERE_REACTIVE,
+    UnitOfReactivePower,
     UnitOfApparentPower,
     UnitOfEnergy,
     LIGHT_LUX,
@@ -164,7 +164,7 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorDeviceClass.REACTIVE_POWER: ELSensorEntityDescription(
-        native_unit_of_measurement=POWER_VOLT_AMPERE_REACTIVE,
+        native_unit_of_measurement=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
