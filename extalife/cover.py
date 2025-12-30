@@ -1,7 +1,9 @@
 """Support for Exta Life roller shutters: SRP, SRM, ROB(future)"""
 import logging
+from enum import StrEnum
 from typing import (
-    Any, Mapping,
+    Any,
+    Mapping,
 )
 
 from homeassistant.components.cover import (
@@ -24,25 +26,18 @@ from .helpers.core import Core
 from .helpers.entities import ExtaLifeChannelNamed
 from .pyextalife import (
     ExtaLifeAction,
-    ExtaLifeDeviceModel,
+    ExtaGateChannelType,
+    ExtaGateChannelState,
     DEVICE_ARR_COVER,
     DEVICE_ARR_SENS_GATE_CONTROLLER
 )
 from .sensor import ExtaSensorDeviceClass
 
-GATE_CHN_TYPE_GATE = 0
-GATE_CHN_TYPE_TILT_GATE = 1
-GATE_CHN_TYPE_WICKET = 2
-GATE_CHN_TYPE_MONO = 3
 
-GATE_CHN_STATE_NONE = 0
-GATE_CHN_STATE_OPEN = 1
-GATE_CHN_STATE_TILT = 2
-GATE_CHN_STATE_CLOSE = 3
-
-COVER_ACTION_NONE = ""
-COVER_ACTION_CLOSING = "closing"
-COVER_ACTION_OPENING = "opening"
+class ExtaCoverAction(StrEnum):
+    NONE = ""
+    CLOSING = "closing"
+    OPENING = "opening"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,7 +71,7 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
     def __init__(self, channel: dict[str, Any], config_entry: ConfigEntry):
         super().__init__(config_entry, channel)
 
-        self._action = COVER_ACTION_NONE
+        self._action: ExtaCoverAction = ExtaCoverAction.NONE
         self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_COVER_SENSOR, channel)
 
     # Exta Life extreme cover positions
@@ -93,7 +88,7 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
         chn_type = self.channel_data.get("channel_type")
         if self.device_model in DEVICE_ARR_COVER:
             return CoverDeviceClass.SHUTTER
-        elif chn_type == GATE_CHN_TYPE_WICKET:
+        elif chn_type == ExtaGateChannelType.WICKET:
             return CoverDeviceClass.DOOR
         else:
             return CoverDeviceClass.GATE
@@ -174,14 +169,15 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
             return pos == ExtaLifeCoverNamed.POS_CLOSED
 
         if gate_state is not None:
-            return gate_state == GATE_CHN_STATE_CLOSE
+            return gate_state == ExtaGateChannelState.CLOSED
 
         return None
 
     @property
     def virtual_sensors(self) -> list[dict[str, Any]]:
         result = super().virtual_sensors
-        if self.device_model == ExtaLifeDeviceModel.ROB21:
+        channel_state = self.data.get("channel_state")
+        if channel_state is not None and channel_state != ExtaGateChannelState.NONE:
             result.append(
                     {
                         VIRTUAL_SENSOR_DEV_CLS: ExtaSensorDeviceClass.GATE_STATE,
@@ -194,16 +190,16 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
     def is_closing( self ) -> bool | None:
         if self.channel_id == COVER_CHANNEL_ID:
             _LOGGER.debug( f"cover.is_closing property query for {self.entity_id}" )
-        if self._action != COVER_ACTION_NONE:
-            return self._action == COVER_ACTION_CLOSING
+        if self._action != ExtaCoverAction.NONE:
+            return self._action == ExtaCoverAction.CLOSING
         return None
 
     @property
     def is_opening(self) -> bool | None:
         if self.channel_id == COVER_CHANNEL_ID:
             _LOGGER.debug( f"cover.is_opening property query for {self.entity_id}" )
-        if self._action != COVER_ACTION_NONE:
-            return  self._action == COVER_ACTION_OPENING
+        if self._action != ExtaCoverAction.NONE:
+            return  self._action == ExtaCoverAction.OPENING
         return None
 
     async def async_open_cover(self, **kwargs: Any) -> None:
@@ -223,8 +219,8 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
 
             if await self.async_action(action, value=pos):
                 if self.is_gate:
-                    self._action = COVER_ACTION_OPENING
-                    _LOGGER.debug( f"open_cover for gate: {self.entity_id}. action: {COVER_ACTION_OPENING}" )
+                    self._action = ExtaCoverAction.OPENING
+                    _LOGGER.debug( f"open_cover for gate: {self.entity_id}. action: {self._action}" )
                 else:
                     data["value"] = pos
                     _LOGGER.debug(f"open_cover for cover: {self.entity_id}. pos: {pos}")
@@ -252,8 +248,8 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
 
             if await self.async_action(action, value=pos):
                 if self.is_gate:
-                    self._action = COVER_ACTION_CLOSING
-                    _LOGGER.debug( f"close_cover for gate: {self.entity_id}. action: {COVER_ACTION_CLOSING}" )
+                    self._action = ExtaCoverAction.CLOSING
+                    _LOGGER.debug( f"close_cover for gate: {self.entity_id}. action: {self._action}" )
                 else:
                     data["value"] = pos
                     _LOGGER.debug(f"close_cover for cover: {self.entity_id}. pos: {pos}")
@@ -294,7 +290,7 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
 
         # update only if notification data contains new status; prevent HA event bus overloading
         if ch_data != self.channel_data or force_update:
-            self._action = COVER_ACTION_NONE
+            self._action = ExtaCoverAction.NONE
             self.channel_data.update(ch_data)
             # synchronize DataManager data with processed update & entity data
             self.sync_data_update_ha()

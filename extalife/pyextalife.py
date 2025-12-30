@@ -179,6 +179,17 @@ class ExtaLifeDeviceModel(IntEnum):
     RDP11 = 338
     SRP03 = 339
 
+class ExtaGateChannelType(IntEnum):
+    GATE = 0
+    TILT_GATE = 1,
+    WICKET = 2,
+    MONO_SWITCH = 3
+
+class ExtaGateChannelState(IntEnum):
+    NONE = 0
+    OPEN = 1
+    PARTIALLY_OPEN = 2
+    CLOSED = 3
 
 class ExtaLifeAction(StrEnum):
     # Exta Life Actions

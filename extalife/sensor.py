@@ -55,6 +55,8 @@ from .helpers.core import Core
 from .helpers.entities import ExtaLifeChannelNamed
 from .pyextalife import (  # pylint: disable=syntax-error
     ExtaLifeDeviceModel,
+    ExtaGateChannelType,
+    ExtaGateChannelState,
     DEVICE_ARR_SENS_ENERGY_METER,
     DEVICE_ARR_SENS_TEMP,
     DEVICE_ARR_SENS_LIGHT,
@@ -65,10 +67,11 @@ from .pyextalife import (  # pylint: disable=syntax-error
 
 _LOGGER = logging.getLogger(__name__)
 
-GATE_STATE_NONE = "none"
-GATE_STATE_OPEN = "open"
-GATE_STATE_PARTIAL = "partial"
-GATE_STATE_CLOSED = "closed"
+class ExtaGateState(StrEnum):
+    NONE = "none"
+    OPEN = "open"
+    PARTIALLY_OPEN = "partial"
+    CLOSED = "closed"
 
 @dataclass
 class ELSensorEntityDescription(SensorEntityDescription):
@@ -497,6 +500,10 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBaseNamed):
         super_id = super()._get_unique_id()
         return f"{super_id}-{self._virtual_prop.get(VIRTUAL_SENSOR_PATH)}"
 
+    @property
+    def virtual_device_class( self ) -> str:
+        return self._virtual_prop.get( VIRTUAL_SENSOR_DEV_CLS )
+
     @staticmethod
     def get_name_suffix(path: str) -> str:
         """Derive name suffix for attribute (virtual) sensor entities
@@ -520,31 +527,52 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBaseNamed):
     def native_value(self) -> StateType | date | datetime | Decimal:
         result = super().native_value
         if self._virtual_prop.get( VIRTUAL_SENSOR_DEV_CLS ) == ExtaSensorDeviceClass.GATE_STATE:
-            if result == 1:
-                return GATE_STATE_OPEN
-            elif result == 2:
-                return GATE_STATE_PARTIAL
-            elif result == 3:
-                return GATE_STATE_CLOSED
-            return GATE_STATE_NONE
+            if result == ExtaGateChannelState.OPEN:
+                return ExtaGateState.OPEN
+            elif result == ExtaGateChannelState.PARTIALLY_OPEN:
+                return ExtaGateState.PARTIALLY_OPEN
+            elif result == ExtaGateChannelState.CLOSED:
+                return ExtaGateState.CLOSED
+            return ExtaGateState.NONE
         return result
 
     @property
     def options(self) -> list[str] | None:
         result = super().options
-        if self._virtual_prop.get(VIRTUAL_SENSOR_DEV_CLS) == ExtaSensorDeviceClass.GATE_STATE:
+        if self.virtual_device_class == ExtaSensorDeviceClass.GATE_STATE:
             result = [
-                GATE_STATE_NONE,
-                GATE_STATE_OPEN,
-                GATE_STATE_PARTIAL,
-                GATE_STATE_CLOSED
+                ExtaGateState.NONE,
+                ExtaGateState.OPEN,
+                ExtaGateState.PARTIALLY_OPEN,
+                ExtaGateState.CLOSED
                        ]
         return result
 
     @property
+    def icon(self) -> str:
+        if self.virtual_device_class == ExtaSensorDeviceClass.GATE_STATE:
+            channel_type = self.data.get( "channel_type" )
+            channel_state = self.data.get( "channel_state" )
 
+            if channel_type == ExtaGateChannelType.GATE or channel_type == ExtaGateChannelType.TILT_GATE:
+                if channel_state == ExtaGateChannelState.OPEN:
+                    return "mdi:gate-open"
+                elif channel_state == ExtaGateChannelState.PARTIALLY_OPEN:
+                    return  "mdi:gate-alert"
+                return "mdi:gate"
+
+            elif channel_type == ExtaGateChannelType.WICKET:
+                if channel_state == ExtaGateChannelState.OPEN:
+                    return "mdi:door-open"
+                elif channel_state == ExtaGateChannelState.CLOSED:
+                    return "mdi:door-closed"
+                return "mdi:door"
+
+        return super().icon
+
+    @property
     def entity_registry_visible_default(self) -> bool:
         result = super().entity_registry_visible_default
-        if self._virtual_prop.get( VIRTUAL_SENSOR_DEV_CLS ) == ExtaSensorDeviceClass.GATE_STATE:
-            return self.native_value != GATE_STATE_NONE
+        if self.virtual_device_class == ExtaSensorDeviceClass.GATE_STATE:
+            return self.native_value != ExtaGateState.NONE
         return result

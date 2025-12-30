@@ -291,9 +291,9 @@
       "extalife": {
         "state": {
           "none": "Brak",
-          "open": "Otwarta",
-          "partial": "Uchylona",
-          "closed": "Zamknięta"
+          "open": "Otwarte",
+          "partial": "Uchylone",
+          "closed": "Zamknięte"
         },
         "state_attributes": {
           "channel_id": {

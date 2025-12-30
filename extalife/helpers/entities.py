@@ -1,4 +1,5 @@
 """Support for ExtaLife devices."""
+import datetime
 import logging
 from typing import (
     Any,
@@ -78,8 +79,11 @@ class ExtaLifeEntity(Entity):
 
     @staticmethod
     def _extra_state_attribute_update(src: dict[str, Any], dst: dict[str, Any], key: str):
-        if src.get(key) is not None:
-            dst.update({key: src.get(key)})
+        value = src.get(key)
+        if value is not None:
+            if key == "sync_time":
+                value = datetime.datetime.fromtimestamp(value, datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')
+            dst.update({key: value})
 
     @staticmethod
     def _mapping_to_dict(mapping: Mapping[str, Any] | None) -> dict[str, Any]:
