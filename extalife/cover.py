@@ -43,7 +43,7 @@ COVER_ACTION_OPENING = "opening"
 
 _LOGGER = logging.getLogger(__name__)
 
-COVER_CHANNEL_ID = "4-1"
+COVER_CHANNEL_ID = "4-12"
 
 # noinspection PyUnusedLocal
 async def async_setup_entry(
