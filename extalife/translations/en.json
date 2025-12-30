@@ -255,6 +255,12 @@
           "channel_id": {
             "name": "Channel ID"
           },
+          "channel_type": {
+            "name": "Channel Type"
+          },
+          "channel_state": {
+            "name": "Channel State"
+          },
           "not_responding": {
             "name": "Communication",
             "state": {
@@ -283,6 +289,12 @@
     },
     "sensor": {
       "extalife": {
+        "state": {
+          "none": "None",
+          "open": "Open",
+          "partial": "Ajar",
+          "closed": "Closed"
+        },
         "state_attributes": {
           "channel_id": {
             "name": "Channel ID"

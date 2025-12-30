@@ -65,6 +65,10 @@ from .pyextalife import (  # pylint: disable=syntax-error
 
 _LOGGER = logging.getLogger(__name__)
 
+GATE_STATE_NONE = "none"
+GATE_STATE_OPEN = "open"
+GATE_STATE_PARTIAL = "partial"
+GATE_STATE_CLOSED = "closed"
 
 @dataclass
 class ELSensorEntityDescription(SensorEntityDescription):
@@ -98,7 +102,7 @@ class ExtaSensorDeviceClass(StrEnum):
     REACTIVE_ENERGY = "reactive_energy"  # kVArh
     PHASE_SHIFT = "phase_shift"
     MANUAL_ENERGY = "manual_energy"
-
+    GATE_STATE = "gate_state"
 
 MAP_EXTA_DEV_TYPE_TO_DEV_CLASS = {}
 MAP_EXTA_DEV_TYPE_TO_DEV_CLASS.update(
@@ -155,6 +159,11 @@ VIRTUAL_SENSOR_RESTRICTIONS = {
 # The key is the property name
 # noinspection PyArgumentList
 SENSOR_TYPES: dict[SensorDeviceClass | ExtaSensorDeviceClass, ELSensorEntityDescription] = {
+    ExtaSensorDeviceClass.GATE_STATE: ELSensorEntityDescription(
+        native_unit_of_measurement=None,
+        device_class=SensorDeviceClass.ENUM,
+        state_class=None,
+    ),
     SensorDeviceClass.WIND_SPEED: ELSensorEntityDescription(
         native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
         device_class=SensorDeviceClass.WIND_SPEED,
@@ -471,6 +480,8 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBaseNamed):
     def override_config_from_dict(self, virtual_domain:str, override: dict[str, Any]) -> None:
         """Override sensor config from a dict"""
         for k, v in override.items():           # pylint: disable=unused-variable
+            if k == "device_class":
+                continue
             if virtual_domain == DOMAIN_VIRTUAL_CLIMATE_SENSOR:
                 if k == VIRTUAL_SENSOR_PATH:
                     v = "battery"
@@ -504,3 +515,36 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBaseNamed):
     def name(self) -> str:
         """Entity name = default name + escaped name suffix (whitespaces)"""
         return f"{super().name} {self.get_name_suffix(self._virtual_prop.get(VIRTUAL_SENSOR_PATH))}"
+
+    @property
+    def native_value(self) -> StateType | date | datetime | Decimal:
+        result = super().native_value
+        if self._virtual_prop.get( VIRTUAL_SENSOR_DEV_CLS ) == ExtaSensorDeviceClass.GATE_STATE:
+            if result == 1:
+                return GATE_STATE_OPEN
+            elif result == 2:
+                return GATE_STATE_PARTIAL
+            elif result == 3:
+                return GATE_STATE_CLOSED
+            return GATE_STATE_NONE
+        return result
+
+    @property
+    def options(self) -> list[str] | None:
+        result = super().options
+        if self._virtual_prop.get(VIRTUAL_SENSOR_DEV_CLS) == ExtaSensorDeviceClass.GATE_STATE:
+            result = [
+                GATE_STATE_NONE,
+                GATE_STATE_OPEN,
+                GATE_STATE_PARTIAL,
+                GATE_STATE_CLOSED
+                       ]
+        return result
+
+    @property
+
+    def entity_registry_visible_default(self) -> bool:
+        result = super().entity_registry_visible_default
+        if self._virtual_prop.get( VIRTUAL_SENSOR_DEV_CLS ) == ExtaSensorDeviceClass.GATE_STATE:
+            return self.native_value != GATE_STATE_NONE
+        return result
