@@ -17,8 +17,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from helpers.const import VIRTUAL_SENSOR_DEV_CLS, VIRTUAL_SENSOR_PATH
 from .helpers.const import (
+    VIRTUAL_SENSOR_DEV_CLS,
+    VIRTUAL_SENSOR_PATH,
     OPTIONS_COVER_INVERTED_CONTROL,
     DOMAIN_VIRTUAL_COVER_SENSOR
 )
