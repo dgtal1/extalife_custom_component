@@ -286,7 +286,7 @@ class ExtaLifeCoverNamed(ExtaLifeChannelNamed, CoverEntity):
 
         if ch_data.get("channel_state") is not None:
             ch_data["channel_state"] = data.get("channel_state")
-            force_update = True
+            force_update = self._action != ExtaCoverAction.NONE
 
         # update only if notification data contains new status; prevent HA event bus overloading
         if ch_data != self.channel_data or force_update:
