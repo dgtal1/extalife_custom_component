@@ -1,16 +1,98 @@
-restart:
-    description: Restart controller by sending API command 150.
+title:
+    name: "ExtaLife"
+
+config_backup:
+    name: "Make controller configuration backup"
+    description: "Create Exta Life controller configuration backup."
     fields:
         entity_id:
-            description: Entity ID representing controller, which should be restarted
+            name: "Entity"
+            description: "Entity ID representing controller for which configuration backup should be created."
             example: extalife.efc_01
+            required: true
+            selector:
+                entity:
+                    filter:
+                        domain: extalife
+        schedule:
+            name: "Schedule"
+            description: "Allows to create separate backup schedules for specified periods (daily, weekly, monthly, etc.). The created config backup will contain the indicated schedule name as a part of its name."
+            example: "weekly"
+            required: true
+            default: ""
+            selector:
+                select:
+                    options:
+                        - label: ""
+                          value: ""
+                        - label: "Daily"
+                          value: "daily"
+                        - label: "Weekly"
+                          value: "weekly"
+                        - label: "Monthly"
+                          value: "monthly"
+                        - label: "Yearly"
+                          value: "yearly"
+                    translation_key: "schedule"
+                    mode: "dropdown"
+        retention:
+            name: "Retention"
+            description: "Specifies how many recent backups are to be kept; if the value '0' is indicated, backup rotation will not be performed."
+            required: true
+            default: 0
+            selector:
+                number:
+                    min: 0
+                    max: 365
+                    mode: box
+        path:
+            name: "Path"
+            description: "Path to the directory where the backup file will be saved. If the path is left empty, then the file will be saved in the HA configuration directory in the extalife directory. If you provide a relative path, it will be appended to the HA configuration path. With an absolute path, the copy file will be saved exactly in the specified location. If the target path does not exist, it will be created."
+            required: false
+            default: ""
+            selector:
+                text:
+
+config_restore:
+    name: "Restore controller configuration backup"
+    description: "Restore Exta Life controller configuration backup"
+    fields:
+        entity_id:
+            description: "Entity ID representing controller for which configuration backup should be restored"
+            example: extalife.efc_01
+            required: true
+            selector:
+                entity:
+                    filter:
+                        domain: extalife
+
+restart:
+    name: "Restart controller"
+    description: "Restart controller by sending API command 150."
+    fields:
+        entity_id:
+            name: "Entity"
+            description: "Entity ID representing controller, which should be restarted"
+            example: extalife.efc_01
+            required: true
+            selector:
+                entity:
+                    filter:
+                        domain: extalife
 
 refresh_state:
-    description: Get the newest staus for all devices / entities from controller.
+    name: "Refresh state"
+    description: "Get the newest status for all devices and entities from controller."
     fields:
         entity_id:
-            description: Entity ID representing controller
+            name: "Entity"
+            description: "Entity ID representing controller"
             example: extalife.efc_01
+            required: true
+            selector:
+                entity:
+                    filter:
+                        domain: extalife
 
 test_button:
     description: Simulate Exta Life transmitter event like a button up, down, click etc

@@ -1,21 +1,27 @@
 from typing import TYPE_CHECKING
 
 DeviceType = "Device"
-DeviceManagerType = 'DeviceManager'
+DeviceManagerType = "DeviceManager"
 TransmitterManagerType = "TransmitterManager"
 ChannelDataManagerType = "ChannelDataManager"
-CoreType = 'Core'  #"Core"
-ExtaLifeTransmitterEventProcessorType = 'ExtaLifeTransmitterEventProcessor'
-
+CoreType = "Core"
+ExtaLifeTransmitterEventProcessorType = "ExtaLifeTransmitterEventProcessor"
+ExtaLifeControllerType = "ExtaLifeController"
 
 if TYPE_CHECKING:
-    from .device import Device, DeviceManager, ExtaLifeTransmitterEventProcessor
-    from ..transmitter import TransmitterManager
-    from .. import ChannelDataManager
     from .core import Core
+    from .device import Device, DeviceManager
+    from ..transmitter import TransmitterManager
+    from .. import (
+        ChannelDataManager,
+    )
+    from .entities import (
+        ExtaLifeController
+    )
+
     DeviceType = Device
     DeviceManagerType = DeviceManager
     TransmitterManagerType = TransmitterManager
     ChannelDataManagerType = ChannelDataManager
     CoreType = Core
-    ExtaLifeTransmitterEventProcessorType = ExtaLifeTransmitterEventProcessor
+    ExtaLifeControllerType = ExtaLifeController

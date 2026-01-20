@@ -1,40 +1,39 @@
 """Provides device automations for Exta Life."""
-from typing import List
+from __future__ import annotations
+
+import logging
+from typing import (
+    Any,
+)
 
 import voluptuous as vol
-import logging
-
 from homeassistant.components.automation import AutomationActionType
-import homeassistant.components.automation.event as event
-from homeassistant.components.device_automation import TRIGGER_BASE_SCHEMA
+from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from homeassistant.components.homeassistant.triggers import event
 from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
-    CONF_ENTITY_ID,
     CONF_PLATFORM,
 )
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.config_entries import ConfigEntry
 
 from .helpers.const import DOMAIN, CONF_EXTALIFE_EVENT_UNIQUE_ID, TRIGGER_TYPE, TRIGGER_SUBTYPE
-from .helpers.typing import CoreType
-from .pyextalife import (MODEL_MAP_MODEL_TO_TYPE, DEVICE_ARR_ALL_TRANSMITTER)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
+TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {vol.Required(TRIGGER_TYPE): str, vol.Required(TRIGGER_SUBTYPE): str}
 )
 
-async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
+
+async def async_get_triggers(hass: HomeAssistant, device_id: str) -> list[dict[str, Any]] | None:
     """List device triggers for Exta Life devices."""
     from .helpers.core import Core
     triggers = []
 
-    _LOGGER.debug("async_get_triggers() device_id: %s", device_id)
+    _LOGGER.debug(f"async_get_triggers() device_id: {device_id}")
 
     device_registry = hass.helpers.device_registry.async_get()
     device = device_registry.async_get(device_id)
@@ -47,7 +46,7 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
         if core:
             break
 
-    int_device = await core.dev_manager.async_get_by_registry_id(device.id)
+    int_device = await core.device_manager.async_get_by_registry_id(device.id)
     if int_device is None:
         return
 
@@ -69,16 +68,17 @@ async def async_attach_trigger(
     config: ConfigType,
     action: AutomationActionType,
     automation_info: dict,
-) -> CALLBACK_TYPE:
+) -> CALLBACK_TYPE | None:
     """Attach a trigger to an automation"""
     from .helpers.core import Core
 
-    _LOGGER.debug("async_attach_trigger() config: %s, action: %s, automation_info: %s", config, action,automation_info )
+    _LOGGER.debug(f"async_attach_trigger() config: {config}, action: {action}, automation_info: {automation_info}")
 
     device_registry = hass.helpers.device_registry.async_get()
     device = device_registry.async_get(config[CONF_DEVICE_ID])
     if device is None:
-        _LOGGER.warning("async_attach_trigger() device_id: %s doesn't exist in Device Registry anymore", config[CONF_DEVICE_ID] )
+        _LOGGER.warning(f"async_attach_trigger() device_id: {config[CONF_DEVICE_ID]} "
+                        f"doesn't exist in Device Registry anymore")
         return
 
     core = None
@@ -87,13 +87,15 @@ async def async_attach_trigger(
         if core:
             break
 
-    int_device = await core.dev_manager.async_get_by_registry_id(device.id)
-    _LOGGER.debug('int_device: %s', int_device)
+    int_device = await core.device_manager.async_get_by_registry_id(device.id)
+    _LOGGER.debug(f"int_device: {int_device}")
     if int_device is None:
         return
 
+    dev_trigger = None
     for trigger in int_device.triggers:
-        if trigger.get(TRIGGER_TYPE) == config.get(TRIGGER_TYPE) and config.get(TRIGGER_SUBTYPE) == trigger.get(TRIGGER_SUBTYPE):
+        if (trigger.get(TRIGGER_TYPE) == config.get(TRIGGER_TYPE) and
+                config.get(TRIGGER_SUBTYPE) == trigger.get(TRIGGER_SUBTYPE)):
             dev_trigger = trigger
             break
 
@@ -107,10 +109,8 @@ async def async_attach_trigger(
         event.CONF_EVENT_DATA: {CONF_EXTALIFE_EVENT_UNIQUE_ID: int_device.event.unique_id, **dev_trigger},
     }
 
-    _LOGGER.debug("async_attach_trigger() event_config: %s", event_config)
+    _LOGGER.debug(f"async_attach_trigger() event_config: {event_config}")
 
     event_config = event.TRIGGER_SCHEMA(event_config)
 
-    return await event.async_attach_trigger(
-        hass, event_config, action, automation_info, platform_type="device"
-    )
+    return await event.async_attach_trigger(hass, event_config, action, automation_info, platform_type="device")

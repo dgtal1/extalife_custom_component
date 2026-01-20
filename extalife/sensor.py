@@ -1,9 +1,16 @@
 """Support for Exta Life sensor devices"""
-from dataclasses import dataclass
 import logging
-from pprint import pformat
-
+from dataclasses import dataclass
+from datetime import (
+    date,
+    datetime,
+)
+from decimal import Decimal
 from enum import StrEnum
+from typing import (
+    Any,
+    Mapping,
+)
 
 from homeassistant.components.sensor import (
     DOMAIN as DOMAIN_SENSOR,
@@ -13,7 +20,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfTemperature,
@@ -23,34 +29,49 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfFrequency,
     UnitOfPower,
-    POWER_VOLT_AMPERE_REACTIVE,
+    UnitOfSpeed,
+    UnitOfReactivePower,
     UnitOfApparentPower,
     UnitOfEnergy,
     LIGHT_LUX,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import (
+    StateType,
+)
 
-from . import ExtaLifeChannel
-from .helpers.core import Core
 from .helpers.const import (
     DOMAIN_VIRTUAL_SENSORS,
     DOMAIN_VIRTUAL_SENSOR,
-    VIRT_SENSOR_CHN_FIELD,
-    VIRT_SENSOR_DEV_CLS,
-    VIRT_SENSOR_PATH,
-    VIRT_SENSOR_ALLOWED_CHANNELS,
+    VIRTUAL_SENSOR_CHN_FIELD,
+    VIRTUAL_SENSOR_DEV_CLS,
+    VIRTUAL_SENSOR_PATH,
+    VIRTUAL_SENSOR_FACTOR,
+    VIRTUAL_SENSOR_ALLOWED_CHANNELS,
+    DOMAIN_VIRTUAL_CLIMATE_SENSOR,
 )
-from .pyextalife import (           # pylint: disable=syntax-error
+from .helpers.core import Core
+from .helpers.entities import ExtaLifeChannelNamed
+from .pyextalife import (  # pylint: disable=syntax-error
+    ExtaLifeDeviceModel,
+    ExtaGateChannelType,
+    ExtaGateChannelState,
     DEVICE_ARR_SENS_ENERGY_METER,
     DEVICE_ARR_SENS_TEMP,
     DEVICE_ARR_SENS_LIGHT,
     DEVICE_ARR_SENS_HUMID,
-    DEVICE_ARR_SENS_MULTI,
     DEVICE_ARR_SENS_PRESSURE,
+    DEVICE_ARR_ALL_SENSOR_MULTI,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
+class ExtaGateState(StrEnum):
+    NONE = "none"
+    OPEN = "open"
+    PARTIALLY_OPEN = "partial"
+    CLOSED = "closed"
 
 @dataclass
 class ELSensorEntityDescription(SensorEntityDescription):
@@ -58,31 +79,33 @@ class ELSensorEntityDescription(SensorEntityDescription):
 
     key: str = ""
     factor: float = 1  # value scaling factor to have a value in normalized units like Watt, Volt etc
-    value_path: str = "value_1"  # path to the value field in channel_data
+    value_path: str | dict[ExtaLifeDeviceModel, str] = "value_1"  # path to the value field in channel
 
-class SensorEntityConfig():
+
+class SensorEntityConfig:
     """ This class MUST correspond to class ELSensorEntityDescription.
     The task of this class is to have instance-based version of Entity Description/config,
     that can be manipulated / overwritten by Virtual sensors setup"""
     def __init__(self, descr: ELSensorEntityDescription) -> None:
         self.key: str = descr.key
         self.factor: float = descr.factor
-        self.value_path: str = descr.value_path
+        self.value_path: str | dict[ExtaLifeDeviceModel, str] = descr.value_path
 
-        self.native_unit_of_measurement: str = descr.native_unit_of_measurement
-        self.device_class: str = descr.device_class
-        self.state_class: str = descr.state_class
+        self.native_unit_of_measurement = descr.native_unit_of_measurement
+        self.device_class = descr.device_class
+        self.state_class: SensorStateClass | str | None = descr.state_class
+        self.suggested_display_precision: int | None = descr.suggested_display_precision
 
 
 class ExtaSensorDeviceClass(StrEnum):
     """ExtaLife custom device classes"""
 
-    #TOTAL_ENERGY = "total_energy"
+    # TOTAL_ENERGY = "total_energy"
     APPARENT_ENERGY = "apparent_energy"  # kVAh
-    REACTIVE_ENERGY = "reactive_energy"  # kvarh
+    REACTIVE_ENERGY = "reactive_energy"  # kVArh
     PHASE_SHIFT = "phase_shift"
     MANUAL_ENERGY = "manual_energy"
-
+    GATE_STATE = "gate_state"
 
 MAP_EXTA_DEV_TYPE_TO_DEV_CLASS = {}
 MAP_EXTA_DEV_TYPE_TO_DEV_CLASS.update(
@@ -101,14 +124,20 @@ MAP_EXTA_DEV_TYPE_TO_DEV_CLASS.update(
     {v: SensorDeviceClass.ENERGY for v in DEVICE_ARR_SENS_ENERGY_METER}
 )
 
-MAP_EXTA_MULTI_CHN_TO_DEV_CLASS = {
-    1: SensorDeviceClass.TEMPERATURE,
-    2: SensorDeviceClass.HUMIDITY,
-    3: SensorDeviceClass.PRESSURE,
-    4: SensorDeviceClass.ILLUMINANCE,
+MAP_EXTA_MULTI_CHN_TO_DEV_CLASS: dict[ExtaLifeDeviceModel, dict[int, SensorDeviceClass]] = {
+    ExtaLifeDeviceModel.RCM21: {
+        1: SensorDeviceClass.TEMPERATURE,
+        2: SensorDeviceClass.HUMIDITY,
+        3: SensorDeviceClass.PRESSURE,
+        4: SensorDeviceClass.ILLUMINANCE,
+    },
+    ExtaLifeDeviceModel.RCW21: {
+        1: SensorDeviceClass.WIND_SPEED,
+        2: SensorDeviceClass.ILLUMINANCE,
+    }
 }
 
-MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS = {
+MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS: dict[str, SensorDeviceClass] = {
     "battery_status": SensorDeviceClass.BATTERY,
     "voltage": SensorDeviceClass.VOLTAGE,
     "current": SensorDeviceClass.CURRENT,
@@ -126,16 +155,31 @@ MAP_EXTA_ATTRIBUTE_TO_DEV_CLASS = {
 }
 
 VIRTUAL_SENSOR_RESTRICTIONS = {
-  "battery_status": {VIRT_SENSOR_ALLOWED_CHANNELS: (1,)}
+  "battery_status": {VIRTUAL_SENSOR_ALLOWED_CHANNELS: (1,)}
 }
 
 # List of additional sensors which are created based on a property
 # The key is the property name
-SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
+# noinspection PyArgumentList
+SENSOR_TYPES: dict[SensorDeviceClass | ExtaSensorDeviceClass, ELSensorEntityDescription] = {
+    ExtaSensorDeviceClass.GATE_STATE: ELSensorEntityDescription(
+        native_unit_of_measurement=None,
+        device_class=SensorDeviceClass.ENUM,
+        state_class=None,
+    ),
+    SensorDeviceClass.WIND_SPEED: ELSensorEntityDescription(
+        native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
+        device_class=SensorDeviceClass.WIND_SPEED,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_path="value",
+        factor=0.277777778,
+    ),
     SensorDeviceClass.ENERGY: ELSensorEntityDescription(
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
         value_path='total_energy',
         factor=0.00001,
     ),
@@ -143,6 +187,7 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
         value_path='manual_energy',
         factor=0.00001,
     ),
@@ -153,7 +198,7 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         factor=0.00001,
     ),
     ExtaSensorDeviceClass.REACTIVE_ENERGY: ELSensorEntityDescription(
-        native_unit_of_measurement="kvarh",
+        native_unit_of_measurement="kVArh",
         device_class=ExtaSensorDeviceClass.REACTIVE_ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         factor=0.00001,
@@ -164,7 +209,7 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorDeviceClass.REACTIVE_POWER: ELSensorEntityDescription(
-        native_unit_of_measurement=POWER_VOLT_AMPERE_REACTIVE,
+        native_unit_of_measurement=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -188,6 +233,7 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
         factor=0.001,
     ),
     SensorDeviceClass.FREQUENCY: ELSensorEntityDescription(
@@ -206,24 +252,29 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfPressure.HPA,
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         factor=1,
     ),
     SensorDeviceClass.ILLUMINANCE: ELSensorEntityDescription(
         native_unit_of_measurement=LIGHT_LUX,
         device_class=SensorDeviceClass.ILLUMINANCE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_path={ExtaLifeDeviceModel.RCW21: "value", },
         factor=1,
     ),
     SensorDeviceClass.HUMIDITY: ELSensorEntityDescription(
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.HUMIDITY,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         factor=1,
     ),
     SensorDeviceClass.BATTERY: ELSensorEntityDescription(
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         factor=100,
     ),
     SensorDeviceClass.TEMPERATURE: ELSensorEntityDescription(
@@ -235,111 +286,133 @@ SENSOR_TYPES: dict[str, ELSensorEntityDescription] = {
 }
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """setup via configuration.yaml not supported anymore"""
-
-
+# noinspection PyUnusedLocal
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities
-):
+        hass: HomeAssistant,
+        config_entry: ConfigEntry,
+        async_add_entities: AddEntitiesCallback) -> None:
     """Set up Exta Life sensors based on existing config."""
 
-    core = Core.get(config_entry.entry_id)
-    channels = core.get_channels(DOMAIN_SENSOR)
+    core: Core = Core.get(config_entry.entry_id)
 
-    _LOGGER.debug("Discovery: %s", pformat(channels))
-    if channels:
-        async_add_entities(
-            [ExtaLifeSensor(device, config_entry) for device in channels]
-        )
+    async def async_load_entities() -> None:
 
-    core.pop_channels(DOMAIN_SENSOR)
-
-    # time for virtual, entity sensors
-    for virtual_domain in DOMAIN_VIRTUAL_SENSORS:
-        channels = core.get_channels(virtual_domain)
-        _LOGGER.debug("Discovery (%s): %s", virtual_domain, pformat(channels))
+        channels: list[dict[str, Any]] = core.get_channels(DOMAIN_SENSOR)
+        _LOGGER.debug(f"Discovery ({DOMAIN_SENSOR}): {channels}")
         if channels:
-            async_add_entities(
-                [
-                    ExtaLifeVirtualSensor(device, config_entry, virtual_domain)
-                    for device in channels
-                ]
-            )
+            async_add_entities([ExtaLifeSensor(channel_data, config_entry) for channel_data in channels])
 
-        core.pop_channels(virtual_domain)
+        core.pop_channels(DOMAIN_SENSOR)
+
+        # time for virtual, entity sensors
+        for virtual_domain in DOMAIN_VIRTUAL_SENSORS:
+            channels = core.get_channels(virtual_domain)
+            _LOGGER.debug(f"Discovery ({virtual_domain}): {channels}")
+            if channels:
+                async_add_entities(
+                    [ExtaLifeVirtualSensor(channel, config_entry, virtual_domain) for channel in channels]
+                )
+
+            core.pop_channels(virtual_domain)
+
+        return None
+
+    await core.platform_register(DOMAIN_SENSOR, async_load_entities)
 
 
-class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
+class ExtaLifeSensorBaseNamed(ExtaLifeChannelNamed, SensorEntity):
     """Representation of Exta Life Sensors"""
 
-    def __init__(self, channel_data, config_entry):
-        super().__init__(channel_data, config_entry)
+    def __init__(self, channel: dict[str, Any],
+                 config_entry: ConfigEntry, device_class: SensorDeviceClass | ExtaSensorDeviceClass):
+        super().__init__(config_entry, channel)
 
-        # self.channel_data = channel_data.get("data")
-        self._config: SensorEntityConfig = None
+        self._config: SensorEntityConfig = SensorEntityConfig(SENSOR_TYPES[device_class])
+
+        if isinstance(self._config.value_path, dict):
+            self._config.value_path = self._config.value_path.get(self.device_model, "value_1")
 
     @property
-    def device_class(self):
+    def device_class(self) -> SensorDeviceClass:
+        """Return the class of this device, from component SENSOR_CLASSES."""
         return self._config.device_class
 
     @property
-    def native_unit_of_measurement(self):
+    def native_unit_of_measurement(self) -> str | None:
+        """Return the unit of measurement of the sensor, if any."""
         return self._config.native_unit_of_measurement
 
     @property
-    def state_class(self) -> SensorStateClass:
+    def state_class(self) -> SensorStateClass | str | None:
+        """Return the state class of this entity, if any."""
         return self._config.state_class
 
     @property
-    def native_value(self):
-        """Return state of the sensor"""
+    def name(self) -> str | None:
+        """Return name of the entity"""
+        result = super().name
+        return result
 
-        value = self.get_value_from_attr_path(self._config.value_path)
+    @property
+    def native_value(self) -> StateType | date | datetime | Decimal:
+        """Return the value reported by the sensor."""
+
+        try:
+            value = self.get_value_from_attr_path(self._config.value_path)
+        except Exception as err:
+            _LOGGER.error(f"failed to read sensor native value, device_type={self.device_model.name}, {err}")
+            value = 0
 
         if value:
+            if isinstance(value, str) or isinstance(value, int):
+                value = float(value)
             value = value * self._config.factor
 
         return value
 
     @property
-    def extra_state_attributes(self):
+    def suggested_display_precision(self) -> int | None:        
+        """Return the suggested number of decimal digits for display."""
+        if self._config.suggested_display_precision is None:
+            return super().suggested_display_precision
+        return self._config.suggested_display_precision
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return device specific state attributes."""
-        attr = super().extra_state_attributes
 
-        data = self.channel_data
-        if data.get("sync_time") is not None:
-            attr.update({"sync_time": data.get("sync_time")})
-        if data.get("last_sync") is not None:
-            attr.update({"last_sync": data.get("last_sync")})
+        es_attrs = self._mapping_to_dict(super().extra_state_attributes)
 
-        self.format_state_attr(attr)
+        self._extra_state_attribute_update(self.channel_data, es_attrs, "sync_time")
+        self._extra_state_attribute_update(self.channel_data, es_attrs, "last_sync")
 
-        return attr
+        return self._format_state_attr(es_attrs)
 
-    def on_state_notification(self, data):
+    def on_state_notification(self, data: dict[str, Any]) -> None:
         """React on state notification from controller"""
+        super().on_state_notification(data)
 
         self.channel_data.update(data)
 
         # synchronize DataManager data with processed update & entity data
         self.sync_data_update_ha()
 
-    def get_value_from_attr_path(self, path: str):
+    def get_value_from_attr_path(self, attr_path: str):
         """Extract value from encoded path"""
-        # Example path: 'phase[1].voltage   -> array phase, row 1, field voltage
+        # Example path: 'phase[1].voltage'   -> array phase, row 1, field voltage
         # attr.append({"dev_class": dev_class, "path": f"?phase[{c}]{k}", "unit": unit})
+
         def find_element(path: str, dictionary: dict):
             """Read field value by path e.g. test[1].value21.
             The path must lead to a single field, nit dict or list. The path is normalized to a '.' separated"""
 
-            def _find_element(keys: list, dictionary: dict):
-                rv = dictionary
-                if isinstance(dictionary, dict):
+            def _find_element(keys: list, _dictionary: dict):
+                rv = _dictionary
+                if isinstance(_dictionary, dict):
                     rv = _find_element(keys[1:], rv[keys[0]])
-                elif isinstance(dictionary, list):
+                elif isinstance(_dictionary, list):
                     if keys[0].isnumeric():
-                        rv = _find_element(keys[1:], dictionary[int(keys[0])])
+                        rv = _find_element(keys[1:], _dictionary[int(keys[0])])
                 else:
                     return rv
                 return rv
@@ -349,36 +422,36 @@ class ExtaLifeSensorBase(ExtaLifeChannel, SensorEntity):
 
             return _find_element(_keys.split("."), dictionary)
 
-        return find_element(path, self.channel_data)
+        return find_element(attr_path, self.channel_data)
 
-class ExtaLifeSensor(ExtaLifeSensorBase):
+
+class ExtaLifeSensor(ExtaLifeSensorBaseNamed):
     """Representation of Exta Life Sensors"""
 
-    def __init__(self, channel_data, config_entry):
-        super().__init__(channel_data, config_entry)
+    def __init__(self, channel: dict[str, Any], config_entry: ConfigEntry):
 
-        data = self.channel_data
-        dev_type = data.get("type")
-        channel = data.get("channel")
+        ch_data: dict[str, Any] = channel.get("data")
+        device_type: ExtaLifeDeviceModel = ExtaLifeDeviceModel(ch_data.get("type"))
+        channel_no: int = ch_data.get("channel")
 
-        dev_class = None
-        if dev_type in DEVICE_ARR_SENS_MULTI:
-            dev_class = MAP_EXTA_MULTI_CHN_TO_DEV_CLASS[channel]
+        if device_type in DEVICE_ARR_ALL_SENSOR_MULTI:
+            device_class = MAP_EXTA_MULTI_CHN_TO_DEV_CLASS[device_type][channel_no]
         else:
-            dev_class = MAP_EXTA_DEV_TYPE_TO_DEV_CLASS[dev_type]
+            device_class = MAP_EXTA_DEV_TYPE_TO_DEV_CLASS[device_type]
 
-        self._config = SensorEntityConfig(SENSOR_TYPES[dev_class])
+        super().__init__(channel, config_entry, device_class)
 
         # create virtual, attribute sensors
-        self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_SENSOR, channel_data)
+        self.push_virtual_sensor_channels(DOMAIN_VIRTUAL_SENSOR, channel)
 
     @property
-    def virtual_sensors(self) -> list:
+    def virtual_sensors(self) -> list[dict[str, Any]]:
         """List of config dicts"""
+
         attr = []
         # return attribute + unit pairs
         data = self.channel_data
-        phase = data.get("phase")
+        phase = data.get("phase")  # this is for MEM-21
         if phase is not None:
             for p in phase:
                 for k, v in p.items():      # pylint: disable=unused-variable
@@ -386,41 +459,53 @@ class ExtaLifeSensor(ExtaLifeSensorBase):
                     if dev_class:
                         attr.append(
                             {
-                                VIRT_SENSOR_DEV_CLS: dev_class,
-                                VIRT_SENSOR_PATH: f"phase[{phase.index(p)}].{k}",
+                                VIRTUAL_SENSOR_DEV_CLS: dev_class,
+                                VIRTUAL_SENSOR_PATH: f"phase[{phase.index(p)}].{k}",
                             }
                         )
 
         return attr
 
 
-class ExtaLifeVirtualSensor(ExtaLifeSensorBase):
+class ExtaLifeVirtualSensor(ExtaLifeSensorBaseNamed):
     """Representation of Exta Life Sensors"""
 
-    def __init__(self, channel_data, config_entry, virtual_domain):
-        super().__init__(channel_data, config_entry)
+    def __init__(self, channel: dict[str, Any], config_entry: ConfigEntry, virtual_domain):
 
         self._virtual_domain = virtual_domain
-        self._virtual_prop: dict = channel_data.get(VIRT_SENSOR_CHN_FIELD)
+        self._virtual_prop: dict[str, Any] = channel.get(VIRTUAL_SENSOR_CHN_FIELD)
 
-        self._config = SensorEntityConfig(SENSOR_TYPES[self._virtual_prop.get(VIRT_SENSOR_DEV_CLS)])
+        # base constructor must be called here after _virtual_prop assignment
+        super().__init__(channel, config_entry, self._virtual_prop.get(VIRTUAL_SENSOR_DEV_CLS))
 
-        self.override_config_from_dict(self._virtual_prop)
+        self.override_config_from_dict(virtual_domain, self._virtual_prop)
 
-
-    def override_config_from_dict(self, override: dict):
+    def override_config_from_dict(self, virtual_domain:str, override: dict[str, Any]) -> None:
         """Override sensor config from a dict"""
         for k, v in override.items():           # pylint: disable=unused-variable
+            if k == "device_class":
+                continue
+            if virtual_domain == DOMAIN_VIRTUAL_CLIMATE_SENSOR:
+                if k == VIRTUAL_SENSOR_PATH:
+                    v = "battery"
             setattr(self._config, k, v)
 
-    def get_unique_id(self) -> str:
-        """Override return a unique ID.
+        if virtual_domain == DOMAIN_VIRTUAL_CLIMATE_SENSOR:
+            setattr(self._config, VIRTUAL_SENSOR_FACTOR, 1)
+
+    def _get_unique_id(self) -> str:
+        """Override return a uniqu  e ID.
         This will add channel attribute path to uniquely identify the entity"""
 
-        super_id = super().get_unique_id()
-        return f"{super_id}-{self._virtual_prop.get(VIRT_SENSOR_PATH)}"
+        super_id = super()._get_unique_id()
+        return f"{super_id}-{self._virtual_prop.get(VIRTUAL_SENSOR_PATH)}"
 
-    def get_name_suffix(self, path: str):
+    @property
+    def virtual_device_class( self ) -> str:
+        return self._virtual_prop.get( VIRTUAL_SENSOR_DEV_CLS )
+
+    @staticmethod
+    def get_name_suffix(path: str) -> str:
         """Derive name suffix for attribute (virtual) sensor entities
         Simply escape special characters with spaces"""
 
@@ -436,4 +521,58 @@ class ExtaLifeVirtualSensor(ExtaLifeSensorBase):
     @property
     def name(self) -> str:
         """Entity name = default name + escaped name suffix (whitespaces)"""
-        return f"{super().name} {self.get_name_suffix(self._virtual_prop.get(VIRT_SENSOR_PATH))}"
+        return f"{super().name} {self.get_name_suffix(self._virtual_prop.get(VIRTUAL_SENSOR_PATH))}"
+
+    @property
+    def native_value(self) -> StateType | date | datetime | Decimal:
+        result = super().native_value
+        if self._virtual_prop.get( VIRTUAL_SENSOR_DEV_CLS ) == ExtaSensorDeviceClass.GATE_STATE:
+            if result == ExtaGateChannelState.OPEN:
+                return ExtaGateState.OPEN
+            elif result == ExtaGateChannelState.PARTIALLY_OPEN:
+                return ExtaGateState.PARTIALLY_OPEN
+            elif result == ExtaGateChannelState.CLOSED:
+                return ExtaGateState.CLOSED
+            return ExtaGateState.NONE
+        return result
+
+    @property
+    def options(self) -> list[str] | None:
+        result = super().options
+        if self.virtual_device_class == ExtaSensorDeviceClass.GATE_STATE:
+            result = [
+                ExtaGateState.NONE,
+                ExtaGateState.OPEN,
+                ExtaGateState.PARTIALLY_OPEN,
+                ExtaGateState.CLOSED
+                       ]
+        return result
+
+    @property
+    def icon(self) -> str:
+        if self.virtual_device_class == ExtaSensorDeviceClass.GATE_STATE:
+            channel_type = self.data.get( "channel_type" )
+            channel_state = self.data.get( "channel_state" )
+
+            if channel_type == ExtaGateChannelType.GATE or channel_type == ExtaGateChannelType.TILT_GATE:
+                if channel_state == ExtaGateChannelState.OPEN:
+                    return "mdi:gate-open"
+                elif channel_state == ExtaGateChannelState.PARTIALLY_OPEN:
+                    return  "mdi:gate-alert"
+                return "mdi:gate"
+
+            elif channel_type == ExtaGateChannelType.WICKET:
+                if channel_state == ExtaGateChannelState.OPEN:
+                    return "mdi:door-open"
+                elif channel_state == ExtaGateChannelState.CLOSED:
+                    return "mdi:door-closed"
+                return "mdi:door"
+
+        return super().icon
+
+    @property
+    def entity_registry_visible_default(self) -> bool:
+        result = super().entity_registry_visible_default
+        if self.virtual_device_class == ExtaSensorDeviceClass.GATE_STATE:
+            return self.native_value != ExtaGateState.NONE
+        return result

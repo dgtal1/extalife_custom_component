@@ -10,43 +10,92 @@
         "title": "Wprowadź dane do podłączenia z kontrolerem EFC-01",
         "description": "Twoje urządzenia Exta Life zostaną wyszukane po podłączeniu do kontrolera EFC-01\n\n {error_info} ",
         "data": {
+          "controller_ip": "Adres kontrolera EFC-01",
+          "recv_timeout": "Maks. czas oczekiwania na odpowiedź",
           "user": "Użytkownik",
-          "password": "Hasło",
-          "controller_ip": "IP kontrolera EFC-01"
+          "password": "Hasło"
+        },
+        "data_description": {
+          "controller_ip": "Adres DNS lub IP kontrolera EFC-01. Użyj znaku dwukropka, aby podać port kontrolera.",
+          "recv_timeout": "Maksymalny czas oczekiwania na odpowiedź po wysłaniu polecenia do kontrolera EFC-01 przez integrację. Domyślnie jest to 5 sekund, jednak w przypadku jeżeli w systemie funkcjonuje REP-21 naleźy ten czas wydłużyć do 10-15 sekund",
+          "user": "Nazwa użytkownika, która będzie wykorzystywana do logowania do kontrolera EFC-01",
+          "password": "Hasło użytkownika, które będzie wykorzystywane do logowania do kontrolera EFC-01"
+        }
+      },
+      "reconfigure_confirm": {
+        "title": "Zmiana konfiguracji \"{title}\"",
+        "description": "Aktualne ustawienia twojego kontrolera EFC-01",
+        "data": {
+          "controller_ip": "Adres kontrolera EFC-01",
+          "recv_timeout": "Maks. czas oczekiwania na odpowiedź",
+          "user": "Użytkownik",
+          "password": "Hasło"
+        },
+        "data_description": {
+          "controller_ip": "Adres DNS lub IP kontrolera EFC-01. Użyj znaku dwukropka, aby podać port kontrolera.",
+          "recv_timeout": "Maksymalny czas oczekiwania na odpowiedź po wysłaniu polecenia do kontrolera EFC-01 przez integrację. Domyślnie jest to 5 sekund, jednak w przypadku jeżeli w systemie funkcjonuje REP-21 naleźy ten czas wydłużyć do 10-15 sekund",
+          "user": "Nazwa użytkownika, która będzie wykorzystywana do logowania do kontrolera EFC-01",
+          "password": "Hasło użytkownika, które będzie wykorzystywane do logowania do kontrolera EFC-01"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Integracja Exta Life: dane logowania",
+        "description": "Wymagana aktualizacja danych logowania dla \"{title}\" ({host}).\nIntegracja Exta Life nie mogła zalogować się poprawnie do kontrolera EFC-01.",
+        "data": {
+          "user": "Użytkownik",
+          "password": "Hasło"
+        },
+        "data_description": {
+          "user": "Nazwa użytkownika, która będzie wykorzystywana do logowania do kontrolera EFC-01",
+          "password": "Hasło użytkownika, które będzie wykorzystywane do logowania do kontrolera EFC-01"
         }
       },
       "title": {
-        "title": "Nazwij tą konfiguracje (opcjonalne)",
-        "description": "Opcjonalnie nadaj nazwę tej konfiguracji e.g. Dom, Mieszkanie, Domek letniskowy lub pozostaw nazwę pustą. Dymyślnie zostanie użyta nazwa odczytana z kontrolera. Nazwa pomoże rozróżnic konfiguracje zdefiniowane dla wielu kontrolerów.",
+        "title": "Nazwij tę konfigurację (opcjonalne)",
+        "description": "Opcjonalnie nadaj nazwę tej konfiguracji e.g. Dom, Mieszkanie, Domek letniskowy lub pozostaw nazwę pustą. Domyślnie zostanie użyta nazwa odczytana z kontrolera. Nazwa pomoże rozróżnić konfiguracje zdefiniowane dla wielu kontrolerów.",
         "data": {
           "title": "Nazwa"
         }
       }
     },
+    "abort": {
+      "reauth_successful": "Dane logowania zostały poprawnie zaktualizowane",
+      "reconfigure_successful": "Ustawienia kontrolera EFC-01 zostały poprawnie zmienione"
+    },
     "error": {
-      "extalife_no_connection": "Nie można było połączyć z kontrolerem EFC-01. Sprawdź adres IP, nazwę użytkownika i hasło",
-      "extalife_invalid_cred": "Nieprawidłowa nazwa użytkownika lub hasło. Popraw dane i spróbuj ponownie"
+      "extalife_no_connection": "Nie można połączyć się z kontrolerem EFC-01. Sprawdź adres IP kontrolera",
+      "extalife_invalid_cred": "Nieprawidłowa nazwa użytkownika lub hasło.\nPopraw dane i spróbuj ponownie",
+      "extalife_login_failed": "Podczas logowania wystąpiły błędy. Sprawdź plik dziennika, aby uzyskać więcej informacji",
+      "extalife_flow_error": "Nie można kontynuować konfiguracji kontrolera EFC-01. Urządzenie już zostało dodane",
+      "extalife_unk_error": "Wystąpił nieokreślony błąd. Sprawdź plik dziennika, aby uzyskać więcej informacji"
     }
   },
   "options": {
     "step": {
       "general": {
+        "title": "Konfiguracja \"{title}\": krok {step_no} z {step_total}",
         "description": "Ustawienia ogólne",
         "data": {
-          "poll_interval": "Interwał czasowy do odpytywania o aktualny stan urządzeń (minuty)",
-          "disable_not_responding": "Wyszarzaj encję gdy urządzenie nie odpowiada (tak jak w aplikacji Exta Life)"
+          "poll_interval": "Czas pomiędzy odpytaniem EFC o stan urządzeń (minuty)",
+          "version_interval": "Czas pomiędzy sprawdzeniem dostępności nowego oprogramowania (godziny)",
+          "disable_not_responding": "Zmień kolor encji na szary, gdy urządzenie nie odpowiada\n(tak jak w aplikacji Exta Life)"
         }
       },
       "light": {
+        "title": "Konfiguracja \"{title}\": krok {step_no} z {step_total}",
         "description": "Ustawienia dla encji świateł (platforma: light)",
         "data": {
-          "icons_list": "Lista numerów ikon urządzeń ROP/ROM, które będą oznaczać, że urządzenie z numerem ikony ma być odzwierciedlone jako światło (platforma light) w Home Assistant"
+          "icons_list": "Lista numerów ikon urządzeń ROP/ROM"
+        },
+        "data_description": {
+          "icons_list": "Wskaż numery ikon, które będą oznaczać, że urządzenie ma być widoczne jako światło w Home Assistant"
         }
       },
       "cover": {
-        "description": "Ustawienia dla rolet",
+        "title": "Konfiguracja \"{title}\": krok {step_no} z {step_total}",
+        "description": "Ustawienia dla rolet (platforma: cover)",
         "data": {
-          "inverted_control": "Odwróć sterowanie roletami w GUI Home Assistant (suwak w pozycji 100 oznacza roletę zamkniętą), aby przypominało sterowanie z aplikacji Exta Life"
+          "inverted_control": "Odwróć sterowanie roletami w GUI Home Assistant (suwak w pozycji 100 oznacza roletę zamkniętą),\naby przypominało sterowanie z aplikacji Exta Life"
         }
       }
     }
@@ -56,8 +105,8 @@
       "button_up": "{subtype} zwolniony",
       "button_down": "{subtype} wciśnięty",
       "button_single_click": "{subtype} kliknięty (wciśnięty i zwolniony)",
-      "button_double_click": "{subtype} podwójnie wciśnięty ('dwuklik')",
-      "button_triple_click": "{subtype} potrójnie wciśnięty ('trójklik')",
+      "button_double_click": "{subtype} podwójnie wciśnięty ('dwu-klik')",
+      "button_triple_click": "{subtype} potrójnie wciśnięty ('trój-klik')",
       "button_long_press": "{subtype} długo przytrzymany"
     },
     "trigger_subtype": {
@@ -97,6 +146,283 @@
       "button_34": "Przycisk 34",
       "button_35": "Przycisk 35",
       "button_36": "Przycisk 36"
+    }
+  },
+  "entity": {
+    "extalife": {
+      "controller": {
+        "name": "Kontroler EFC-01",
+        "state": {
+          "ready": "Gotowy",
+          "connected": "Połączony",
+          "disconnected": "Rozłączony"
+        },
+        "state_attributes": {
+          "name": {
+            "name": "Nazwa"
+          },
+          "type": {
+            "name": "Typ urządzenia"
+          },
+          "hostname": {
+            "name": "Nazwa hosta"
+          },
+          "username": {
+            "name": "Zalogowany użytkownik"
+          },
+          "ipv4_address": {
+            "name": "Adres IP"
+          },
+          "ipv4_netmask": {
+            "name": "Maska sieciowa"
+          },
+          "ipv4_gateway": {
+            "name": "Brama domyślna"
+          },
+          "ipv4_dns": {
+            "name": "Serwer DNS"
+          },
+          "mac_address": {
+            "name": "Adres MAC"
+          },
+          "software_version": {
+            "name": "Wersja oprogramowania"
+          },
+          "ver_check_last": {
+            "name": "Ostatnie sprawdzenie aktualizacji"
+          },
+          "ver_check_next": {
+            "name": "Następne sprawdzenie aktualizacji"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Identyfikator kanału"
+          },
+          "not_responding": {
+            "name": "Komunikacja",
+            "state": {
+              "true": "urządzenie nie odpowiada",
+              "false": "brak problemów"
+            }
+          },
+          "sync_time": {
+            "name": "Znacznik synchronizacji"
+          },
+          "last_sync": {
+            "name": "Ostatnia synchronizacja"
+          },
+          "tamper": {
+            "name": "Naruszenie"
+          },
+          "tamper_sync_time": {
+            "name": "Synchronizacja naruszenia"
+          }
+        }
+      }
+    },
+    "button": {
+      "restart": {
+        "name": "Uruchom ponownie"
+      },
+      "update": {
+        "name": "Sprawdź aktualizacje"
+      }
+    },
+    "climate": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Identyfikator kanału"
+          },
+          "not_responding": {
+            "name": "Komunikacja",
+            "state": {
+              "true": "urządzenie nie odpowiada",
+              "false": "brak problemów"
+            }
+          }
+        }
+      }
+    },
+    "cover": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Identyfikator kanału"
+          },
+          "channel_type": {
+            "name": "Typ kanału"
+          },
+          "channel_state": {
+            "name": "Status kanału"
+          },
+          "not_responding": {
+            "name": "Komunikacja",
+            "state": {
+              "true": "urządzenie nie odpowiada",
+              "false": "brak problemów"
+            }
+          }
+        }
+      }
+    },
+    "light": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Identyfikator kanału"
+          },
+          "not_responding": {
+            "name": "Komunikacja",
+            "state": {
+              "true": "urządzenie nie odpowiada",
+              "false": "brak problemów"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "extalife": {
+        "state": {
+          "none": "Brak",
+          "open": "Otwarte",
+          "partial": "Uchylone",
+          "closed": "Zamknięte"
+        },
+        "state_attributes": {
+          "channel_id": {
+            "name": "Identyfikator kanału"
+          },
+          "not_responding": {
+            "name": "Komunikacja",
+            "state": {
+              "true": "urządzenie nie odpowiada",
+              "false": "brak problemów"
+            }
+          },
+          "sync_time": {
+            "name": "Znacznik synchronizacji"
+          },
+          "last_sync": {
+            "name": "Ostatnia synchronizacja"
+          }
+        }
+      }
+    },
+    "switch": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Identyfikator kanału"
+          },
+          "not_responding": {
+            "name": "Komunikacja",
+            "state": {
+              "true": "urządzenie nie odpowiada",
+              "false": "brak problemów"
+            }
+          }
+        }
+      }
+    },
+    "update": {
+      "extalife": {
+        "title": "Uwagi do wersji",
+        "name": "Oprogramowanie",
+        "state": {
+          "unknown": "HA błąd: brak tłumaczenia",
+          "on": "Nowa wersja dostępna",
+          "off": "Aktualne"
+        },
+        "state_attributes": {
+          "installed_version": {
+            "name": "Bieżąca wersja"
+          },
+          "latest_version": {
+            "name": "Dostępna wersja"
+          }
+        }
+      }
+    }
+  },
+  "selector": {
+    "schedule": {
+      "options": {
+        "daily": "Dzienny",
+        "weekly": "Tygodniowy",
+        "monthly": "Miesięczny",
+        "yearly": "Roczny"
+      }
+    }
+  },
+  "services": {
+    "config_backup": {
+      "name": "Wykonaj kopię konfiguracji kontrolera",
+      "description": "Tworzenie kopii zapasowej konfiguracji kontrolera Exta Life.",
+      "fields": {
+        "entity_id": {
+          "name": "Encja",
+          "description": "Identyfikator encji reprezentujący kontroler EFC-01, dla którego ma zostać utworzona kopia zapasowa."
+        },
+        "schedule": {
+          "name": "Harmonogram",
+          "description": "Umożliwia tworzenie oddzielnych harmonogramów dla kopii zapasowych wg. wskazanych interwałów (dzienny, tygodniowy, miesięczny etc.). Tworzony plik kopii będzie zawierał w nazwie wskazaną nazwę harmonogramu."
+        },
+        "retention": {
+          "name": "Retencja",
+          "description": "Określa, ile ostatnich kopii zapasowych ma być zatrzymanych, jeżeli zostanie wskazana wartość '0' to rotacja kopii nie będzie wykonana."
+        },
+        "path": {
+          "name": "Ścieżka",
+          "description": "Ścieżka do folderu, gdzie zostanie zapisany plik kopii zapasowej. Jeżeli ścieżka pozostanie pusta, wtedy plik zostanie zapisany w katalogu konfiguracji HA w katalogu extalife. W przypadku podania ścieżki względnej zostanie ona dołączona do ścieżki konfiguracji HA. Przy ścieżce bezwzględnej plik kopii zostanie zapisany dokładnie we wskazanym miejscu. Jeżeli ścieżka docelowa nie istnieje, to zostanie utworzona."
+        }
+      }
+    },
+    "config_restore": {
+      "name": "Przywróć kopię konfiguracji kontrolera",
+      "description": "Przywraca kopię zapasową konfiguracji kontrolera Exta Life.",
+      "fields": {
+        "entity_id": {
+          "name": "Encja",
+          "description": "Identyfikator encji reprezentujący kontroler EFC-01, dla którego ma zostać przywrócona kopia zapasowa."
+        }
+      }
+    },
+    "restart": {
+      "name": "Uruchom ponownie kontroler",
+      "description": "Uruchomia ponownie kontroler EFC-01 wykorzystując polecenie API kontrolera.",
+      "fields": {
+        "entity_id": {
+          "name": "Encja",
+          "description": "Identyfikator encji kontrolera, który powinien zostać uruchomiony ponownie"
+        }
+      }
+    },
+    "refresh_state": {
+      "name": "Odśwież stan",
+      "description": "Pobiera aktualny status dla wszystkich urządzeń i encji z kontrolera EFC-01.",
+      "fields": {
+        "entity_id": {
+          "name": "Encja",
+          "description": "Identyfikator encji kontrolera"
+        }
+      }
+    }
+  },
+  "logbook": {
+    "update_failed": "aktualizacja do wersji {latest_version} nie powiodła się",
+    "update_success": "zostało zaktualizowane do wersji {installed_version}"
+  },
+  "notifications": {
+    "update_failed": {
+      "title":"Exta Life: Aktualizacja",
+      "message": "Aktualizacja urządzenia się nie powiodła.\n\nKod błędu {error}:{err_str}. Aby uzyskać więcej informacji, kliknij {link}"
     }
   }
 }

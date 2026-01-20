@@ -4,47 +4,86 @@
     "step": {
       "confirm": {
         "description": "Do you want to set up integration with Exta Life controller (EFC-01) and discover your devices?",
-        "title": "Connection to EFC-01 controller "
+        "title": "Connection to EFC-01 controller"
       },
       "init": {
         "title": "Enter the connection parameters to EFC-01 controller",
-        "description": "Your Exta Life devices will be autodetected after we connect to EFC-01\n\n {error_info} ",
+        "description": "Your Exta Life devices will be auto-detected after we connect to EFC-01\n\n {error_info}",
+        "data": {
+          "controller_ip": "DNS or IP address of EFC-01 controller. Use \":\" to specify port number.",
+          "user": "User",
+          "password": "Password"
+        }
+      },
+      "reconfigure_confirm": {
+        "title": "Configuration change \"{title}\"",
+        "description": "Your EFC-01 controller current settings",
+        "data": {
+          "controller_ip": "EFC-01 controller address",
+          "user": "User",
+          "password": "Password"
+        },
+        "data_description": {
+          "controller_ip": "DNS or IP address of EFC-01 controller. Use \":\" to specify port number.",
+          "user": "Username that should be used to log into EFC-01 controller",
+          "password": "User password that should be used to log into EFC-01 controller"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Exta Life integration - credentials",
+        "description": "Update required of credentials for \"{title}\" ({host}).\nExta Life integration was unable to log into your EFC-01 controller.",
         "data": {
           "user": "User",
-          "password": "Password",
-          "controller_ip": "EFC-01 IP"
+          "password": "Password"
+        },
+        "data_description": {
+          "user": "Username that should be used to log into EFC-01 controller",
+          "password": "User password that should be used to log into EFC-01 controller"
         }
       },
       "title": {
         "title": "Name your EFC-01 controller",
-        "description": "Optionally give a title to this EFC-01 e.g. Home, Apartment, Vacation house or leave it blank. A title will help to distinguish config entries for multiple controllers.",
+        "description": "Optionally give a title to this EFC-01 e.g. Home, Apartment, Vacation house or leave it blank.\nA title will help to distinguish config entries for multiple controllers.",
         "data": {
           "title": "Title"
         }
       }
     },
+    "abort": {
+      "reauth_successful": "User credentials has been updated successfully",
+      "reconfigure_successful": "Controller EFC-01 has been reconfigured successfully"
+    },
     "error": {
-      "extalife_no_connection": "Cannot connect to EFC-01 controller. Check IP address, user and password",
-      "extalife_invalid_cred": "Invalid user or password. Correct and try again"
+      "extalife_no_connection": "Cannot connect to EFC-01 controller. Check controller IP address",
+      "extalife_invalid_cred": "Invalid user or password. Correct and try again",
+      "extalife_login_failed": "Unable to login. Check log file for more info",
+      "extalife_flow_error": "Cannot continue EFC-01 controller setup. Device already exists",
+      "extalife_unk_error": "Unknown error occurred. Check log file for more info"
     }
   },
   "options": {
     "step": {
       "general": {
+        "title": "Configuration \"{title}\": step {step_no} of {step_total}",
         "description": "General settings",
         "data": {
           "poll_interval": "Status polling interval",
-          "disable_not_responding": "Disable entities when device is not responding (just as in the 'Exta Life' app)"
+          "version_interval": "New version polling check interval",
+          "disable_not_responding": "Disable entities when device is not responding.\n(just as in the 'Exta Life' app)"
         }
       },
       "light": {
+        "title": "Configuration \"{title}\": step {step_no} of {step_total}",
         "description": "Settings for lights",
         "data": {
-          "icons_list": "List of ROP/ROM icons to be mapped as light entity in Home Assistant",
-          "test": "Test"
+          "icons_list": "List of ROP/ROM icons to map"
+        },
+        "data_description": {
+          "icons_list": "Select icon numbers which should be mapped as light entity in Home Assistant"
         }
       },
       "cover": {
+        "title": "Configuration \"{title}\": step {step_no} of {step_total}",
         "description": "Settings for covers",
         "data": {
           "inverted_control": "Invert control of roller shutters as in Exta Life app"
@@ -57,8 +96,8 @@
       "button_up": "\"{subtype}\" button pressed",
       "button_down": "\"{subtype}\" button released",
       "button_single_click": "\"{subtype}\" button single clicked (pushed and released)",
-      "button_double_click": "\"{subtype}\" button double clicked",
-      "button_triple_click": "\"{subtype}\" button doubltriple clicked",
+      "button_double_click": "\"{subtype}\" button double-clicked",
+      "button_triple_click": "\"{subtype}\" button triple clicked",
       "button_long_press": "\"{subtype}\" button released after long press"
     },
     "trigger_subtype": {
@@ -98,6 +137,263 @@
       "button_34": "Button 34",
       "button_35": "Button 35",
       "button_36": "Button 36"
+    }
+  },
+  "entity": {
+    "extalife": {
+      "controller": {
+        "name": "EFC-01 Controller",
+        "state": {
+          "ready": "Ready",
+          "connected": "Connected",
+          "disconnected": "Disconnected"
+        },
+        "state_attributes": {
+          "name": {
+            "name": "Name"
+          },
+          "type": {
+            "name": "Device type"
+          },
+          "hostname": {
+            "name": "Host name"
+          },
+          "username": {
+            "name": "Logged user"
+          },
+          "ipv4_address": {
+            "name": "IP address"
+          },
+          "ipv4_netmask": {
+            "name": "Netmask"
+          },
+          "ipv4_gateway": {
+            "name": "Default gateway"
+          },
+          "ipv4_dns": {
+            "name": "DNS server"
+          },
+          "mac_address": {
+            "name": "MAC address"
+          },
+          "software_version": {
+            "name": "Firmware version"
+          },
+          "ver_check_last": {
+            "name": "Update last check"
+          },
+          "ver_check_next": {
+            "name": "Update next check"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Channel ID"
+          },
+          "not_responding": {
+            "name": "Communication",
+            "state": {
+              "true": "device not responding",
+              "false": "works correctly"
+            }
+          },
+          "sync_time": {
+            "name": "Synchronization mark"
+          },
+          "last_sync": {
+            "name": "Last synchronization"
+          },
+          "tamper": {
+            "name": "Tampered"
+          },
+          "tamper_sync_time": {
+            "name": "Tamper last synchronization"
+          }
+        }
+      }
+    },
+    "button": {
+      "restart": {
+        "name": "Restart"
+      },
+      "update": {
+        "name": "Check updates"
+      }
+    },
+    "climate": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Channel ID"
+          },
+          "not_responding": {
+            "name": "Communication",
+            "state": {
+              "true": "device not responding",
+              "false": "works correctly"
+            }
+          }
+        }
+      }
+    },
+    "cover": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Channel ID"
+          },
+          "not_responding": {
+            "name": "Communication",
+            "state": {
+              "true": "device not responding",
+              "false": "works correctly"
+            }
+          }
+        }
+      }
+    },
+    "light": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Channel ID"
+          },
+          "not_responding": {
+            "name": "Communication",
+            "state": {
+              "true": "device not responding",
+              "false": "works correctly"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Channel ID"
+          },
+          "not_responding": {
+            "name": "Communication",
+            "state": {
+              "true": "device not responding",
+              "false": "works correctly"
+            }
+          },
+          "sync_time": {
+            "name": "Synchronization mark"
+          },
+          "last_sync": {
+            "name": "Last synchronization"
+          }
+        }
+      }
+    },
+    "switch": {
+      "extalife": {
+        "state_attributes": {
+          "channel_id": {
+            "name": "Channel ID"
+          },
+          "not_responding": {
+            "name": "Communication",
+            "state": {
+              "true": "device not responding",
+              "false": "works correctly"
+            }
+          }
+        }
+      }
+    },
+    "update": {
+      "extalife": {
+        "title": "Release notes for",
+        "name": "Firmware",
+        "state": {
+          "unknown": "HA error: missing translation",
+          "on": "New version available",
+          "off": "Up to date"
+        }
+      }
+    }
+  },
+  "selector": {
+    "schedule": {
+      "options": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "yearly": "Yearly"
+      }
+    }
+  },
+  "services": {
+    "x_config_backup": {
+      "name": "Make controller configuration backup",
+      "description": "Create Exta Life controller configuration backup.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "Entity ID representing controller for which configuration backup should be created."
+        },
+        "schedule": {
+          "name": "Schedule",
+          "description": "Allows to create separate backup schedules for specified periods (daily, weekly, monthly, etc.). The created config backup will contain the indicated schedule name as a part of its name."
+        },
+        "retention": {
+          "name": "Retention",
+          "description": "Specifies how many recent backups are to be kept; if the value '0' is indicated, backup rotation will not be performed."
+        },
+        "path": {
+          "name": "Path",
+          "description": "Path to the directory where the backup file will be saved. If the path is left empty, then the file will be saved in the HA configuration directory in the extalife directory. If you provide a relative path, it will be appended to the HA configuration path. With an absolute path, the copy file will be saved exactly in the specified location. If the target path does not exist, it will be created."
+        }
+      }
+    },
+    "config_restore":{
+      "name": "Restore controller configuration backup",
+      "description": "Restore Exta Life controller configuration backup.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID representing controller for which configuration backup should be restored."
+        }
+      }
+    },
+    "restart": {
+      "name": "Restart controller",
+      "description": "Restart controller by sending API command 150.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "Entity ID representing controller, which should be restarted"
+        }
+      }
+    },
+    "refresh_state": {
+      "name": "Refresh state",
+      "description": "Get the newest status for all devices and entities from controller.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "Entity ID representing controller"
+        }
+      }
+    }
+  },
+  "logbook": {
+    "update_failed": "update to version {latest_version} failed",
+    "update_success": "has been updated to version {installed_version}"
+  },
+  "notifications": {
+    "update_failed": {
+      "title":"Exta Life: Firmware update",
+      "message": "Device update failed. Error code {error}:{err_str}. For more information click {link}"
     }
   }
 }

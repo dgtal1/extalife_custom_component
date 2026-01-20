@@ -1,0 +1,26 @@
+{
+  "entity": {
+    "extalife": {
+      "controller": {
+        "default": "mdi:cube-outline",
+        "state": {
+          "ready": "mdi:cube-outline",
+          "connected": "mdi:cube-scan",
+          "disconnected": "mdi:cube-off-outline"
+        }
+      }
+    },
+    "update": {
+      "extalife": {
+        "default": "mdi:chip"
+      }
+    }
+  },
+  "services": {
+    "config_backup": "mdi:archive-arrow-down",
+    "config_restore": "mdi:archive-arrow-up",
+    "restart": "mdi:restart",
+    "refresh_state": "mdi:sync",
+    "test_button": "mdi:button-pointer"
+  }
+}

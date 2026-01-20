@@ -1,43 +1,19 @@
 """Provides device automations for Exta Life."""
-from typing import List
+
 import logging
-
-import voluptuous as vol
-
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers import device_registry as dr
-from homeassistant.const import (
-    CONF_DEVICE_ID,
-    CONF_DOMAIN,
-    CONF_ENTITY_ID,
-    CONF_PLATFORM,
-    CONF_TYPE,
-    STATE_OFF,
-    STATE_ON,
+from typing import Any
+from homeassistant.helpers.device_registry import (
+    DeviceRegistry,
+    DeviceEntry
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry
 from homeassistant.config_entries import ConfigEntry
-
-from .const import DOMAIN
+from .typing import CoreType
 
 from ..pyextalife import (
+    ExtaLifeDeviceModel,
+    ExtaLifeDeviceModelName,
     DEVICE_ARR_ALL_TRANSMITTER,
-    MODEL_RNK22,
-    MODEL_RNK24,
-    MODEL_P4572,
-    MODEL_P4574,
-    MODEL_P4578,
-    MODEL_P45736,
-    MODEL_LEDIX_P260,
-    MODEL_RNM24,
-    MODEL_RNP21,
-    MODEL_RNP22,
-    MODEL_P501,
-    MODEL_P520,
-    MODEL_P521L,
 )
 
 from .const import (
@@ -53,13 +29,12 @@ from .const import (
     TRIGGER_SUBTYPE_BUTTON_TEMPLATE,
     CONF_PROCESSOR_EVENT_STAT_NOTIFICATION,
 )
-from .typing import ExtaLifeTransmitterEventProcessorType
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class DeviceEvent:
-    def __init__(self, event, unique_id):
+    def __init__(self, event, unique_id) -> None:
         """
         event - event in HA
         unique_id - unique identifier of the event source e.g. unique device id
@@ -77,16 +52,16 @@ class DeviceEvent:
 
 
 class Device:
-    def __init__(self, device: DeviceEntry, type):
+    def __init__(self, device: DeviceEntry, device_type: ExtaLifeDeviceModel):
         """dev_info - device info - the same passed to Device Registry
-        type  - Exta Life module type e.g 10 = ROP-21"""
-        self._type = type
-        self._device = device
+        type  - Exta Life module type e.g. 10 = ROP-21"""
+        self._type: ExtaLifeDeviceModel = device_type
+        self._device: DeviceEntry = device
         self._event_processor = None
 
     @property
-    def model(self):
-        return self._device.model
+    def model(self) -> ExtaLifeDeviceModelName:
+        return ExtaLifeDeviceModelName(self._device.model)
 
     @property
     def type(self):
@@ -100,7 +75,7 @@ class Device:
     def unique_id(self):
 
         # unpack tuple from set and return unique_id by list generator and list index 0
-        return [tuple for tuple in self.identifiers][0][1]
+        return [value for value in self.identifiers][0][1]
 
     @property
     def registry_id(self) -> str:
@@ -108,7 +83,7 @@ class Device:
 
     @property
     def triggers(self) -> list:
-        pass
+        return []
 
     def controller_event(self, dataa):
         _LOGGER.debug("Device.controller_event")
@@ -127,25 +102,25 @@ class Device:
 
 class DeviceFactory:
     @staticmethod
-    def get_device(device: DeviceEntry, type) -> Device:  # subclass
-        if type in DEVICE_ARR_ALL_TRANSMITTER:
-            return TransmitterDevice(device, type)
+    def get_device(device: DeviceEntry, device_type) -> Device:  # subclass
+        if device_type in DEVICE_ARR_ALL_TRANSMITTER:
+            return TransmitterDevice(device, device_type)
         else:
             raise NotImplementedError
 
 
 class TransmitterDevice(Device):
-    def __init__(self, device: DeviceEntry, type):
+    def __init__(self, device: DeviceEntry, device_type: ExtaLifeDeviceModel):
         from .event import ExtaLifeTransmitterEventProcessor
 
-        super().__init__(device, type)
+        super().__init__(device, device_type)
         self._event_processor = ExtaLifeTransmitterEventProcessor(self)
 
     @property
     def triggers(self) -> list:
         triggers = []
 
-        trigger_type = (
+        trigger_types = (
             TRIGGER_BUTTON_UP,
             TRIGGER_BUTTON_DOWN,
             TRIGGER_BUTTON_SINGLE_CLICK,
@@ -154,26 +129,21 @@ class TransmitterDevice(Device):
             TRIGGER_BUTTON_LONG_PRESS,
         )
         buttons = 0
-        if self.model in (MODEL_RNK22, MODEL_P4572):
+        if self.type in (ExtaLifeDeviceModel.RNK22, ExtaLifeDeviceModel.P4572):
             buttons = 2
-        elif self.model in (
-            MODEL_RNK24,
-            MODEL_P4574,
-            MODEL_RNM24,
-            MODEL_RNP21,
-            MODEL_RNP22,
-        ):
+        elif self.type in (ExtaLifeDeviceModel.RNK24, ExtaLifeDeviceModel.P4574, ExtaLifeDeviceModel.RNM24,
+                           ExtaLifeDeviceModel.RNP21, ExtaLifeDeviceModel.RNP22):
             buttons = 4
-        elif self.model in (MODEL_P4578):
+        elif self.type in ExtaLifeDeviceModel.P4578:
             buttons = 8
-        elif self.model in (MODEL_P45736):
+        elif self.type in ExtaLifeDeviceModel.P45736:
             buttons = 36
 
         for button in range(1, buttons + 1):
-            for type in trigger_type:
+            for trigger_type in trigger_types:
                 triggers.append(
                     {
-                        TRIGGER_TYPE: type,
+                        TRIGGER_TYPE: trigger_type,
                         TRIGGER_SUBTYPE: TRIGGER_SUBTYPE_BUTTON_TEMPLATE.format(button),
                     }
                 )
@@ -189,32 +159,34 @@ class TransmitterDevice(Device):
 
 
 class DeviceManager:
-    def __init__(self, config_entry: ConfigEntry, core: "Core"):
-        from .core import Core
+    def __init__(self, config_entry: ConfigEntry, core: CoreType):
 
-        self._core = core
-        self._config_entry = config_entry
+        self._core: CoreType = core
+        self._config_entry: ConfigEntry = config_entry
 
         self._devices = dict()
 
-    async def register_in_dr(self, dev_info: dict) -> DeviceEntry:
-        device_registry = dr.async_get(self._core.hass)
+    async def register_in_ha_device_registry(self, dev_info: dict[str, Any]) -> DeviceEntry:
 
-        device_entry = device_registry.async_get_or_create(
+        ha_device_registry: DeviceRegistry = device_registry.async_get(self._core.hass)
+
+        device_entry = ha_device_registry.async_get_or_create(
             config_entry_id=self._config_entry.entry_id, **dev_info
         )
 
         return device_entry
 
-    async def async_add(self, type, dev_info=None, ha_device=None) -> Device:
+    async def async_add(self, device_type: ExtaLifeDeviceModel,
+                        device_info: dict[str, Any] = None,
+                        ha_device: DeviceEntry = None) -> Device:
         """
         dev_info - device info data in HA device registry format. To be passed to HA Device Registry
-        type  - Exta Life module type e.g 10 = ROP-21
+        type  - Exta Life module type e.g. 10 = ROP-21
         ha_device: DeviceEntry - boolean whether to register device in HA Device Registry or not
         """
 
-        device_entry = ha_device if ha_device else await self.register_in_dr(dev_info)
-        device = DeviceFactory.get_device(device_entry, type)
+        device_entry = ha_device if ha_device else await self.register_in_ha_device_registry(device_info)
+        device = DeviceFactory.get_device(device_entry, device_type)
 
         self._devices.update({device_entry.id: device})
         return device
